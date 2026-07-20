@@ -27,7 +27,7 @@ Pillow==10.4.0
 
 # KYC Verification (OCR + Face matching)
 pytesseract==0.3.10
-face-recognition==1.3.0
+# face-recognition installed separately in Dockerfile (dlib-bin)
 
 # Utilities
 python-slugify==8.0.4

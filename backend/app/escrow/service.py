@@ -1,5 +1,6 @@
 from uuid import UUID, uuid4
-from app.common.time import utcnow_naive as utcnow, timedelta
+from datetime import timedelta
+from app.common.time import utcnow_naive as utcnow
 from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update

@@ -8,7 +8,7 @@ from app.database import get_db
 from app.dependencies import get_current_user, get_current_user_id, get_verified_user
 from app.users.models import User
 from app.users.service import UserService
-from app.users.schemas import ProfileUpdateRequest, VerificationDocumentUpload, UserListResponse
+from app.users.schemas import ProfileUpdateRequest, VerificationDocumentUpload, UserListResponse, SignatureSaveRequest
 from app.auth.schemas import ChangePasswordRequest
 from app.auth.service import verify_password, hash_password
 from app.common.enums import UserRole
@@ -500,7 +500,7 @@ async def get_my_signature(user: User = Depends(get_current_user)):
 
 @router.post("/me/signature", response_model=SuccessResponse)
 async def save_my_signature(
-    body: "SignatureSaveRequest",
+    body: SignatureSaveRequest,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):

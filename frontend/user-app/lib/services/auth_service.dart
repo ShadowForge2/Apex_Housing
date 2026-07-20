@@ -186,6 +186,7 @@ class AuthService {
   Future<Map<String, dynamic>> signInWithGoogle() async {
     final googleSignIn = GoogleSignIn(
       scopes: ['email', 'profile'],
+      serverClientId: '731881455826-i0hcol5ribhciar8bo0k8fpmmuf6oiv0.apps.googleusercontent.com',
     );
 
     await googleSignIn.signOut();

@@ -6,7 +6,6 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
     curl \
     libgl1 \
     libglib2.0-0 \
@@ -19,6 +18,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser
 
 COPY requirements.txt .
+RUN pip install --no-cache-dir dlib-bin==19.24.6
+RUN pip install --no-cache-dir --no-deps face-recognition==1.3.0
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .

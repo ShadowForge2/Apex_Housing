@@ -1,0 +1,55 @@
+# Dependencies
+backend/.venv/
+frontend/user-app/.dart_tool/
+frontend/apex_admin/.dart_tool/
+node_modules/
+
+# Environment
+backend/.env
+*.env.local
+firebase_credentials.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+.pytest_cache/
+
+# Dart/Flutter
+frontend/user-app/build/
+frontend/apex_admin/build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Storage
+storage/
+uploads/
+
+# Logs
+*.log
+app_debug.log
+celerybeat-schedule*
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+celerybeat-schedule-shm
+celerybeat-schedule-wal
+
+# Dev scripts
+frontend/user-app/_*.py
+frontend/user-app/emulator_output.log
+frontend/user-app/flutter_out.log

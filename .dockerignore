@@ -1,0 +1,49 @@
+.git
+.gitignore
+.idea
+.vscode
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+*.egg-info
+dist
+build
+node_modules
+.next
+out
+
+# Secrets — never ship into images
+backend/.env
+*.env.local
+firebase_credentials.json
+firebase_credentials*.json
+**/key.properties
+**/*.jks
+**/*.keystore
+
+# Flutter build artifacts
+frontend/user-app/build/
+frontend/apex_admin/build/
+frontend/user-app/.dart_tool/
+frontend/apex_admin/.dart_tool/
+
+# Dev / debug
+*.log
+app_debug.log
+celerybeat-schedule*
+storage/
+uploads/
+
+# Website
+website/node_modules/
+website/.next/
+website/out/
+
+# Misc
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+*~

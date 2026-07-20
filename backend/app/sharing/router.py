@@ -7,7 +7,7 @@ from fastapi import Depends
 from app.database import get_db
 from app.properties.models import Property
 
-router = API(tags=["sharing"])
+router = APIRouter(tags=["sharing"])
 
 PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.example.apex_housing"
 APP_SCHEME = "apexhousing://property"

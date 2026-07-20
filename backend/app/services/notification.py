@@ -18,15 +18,28 @@ def _initialize_firebase():
         return
 
     try:
+        import json
+        import tempfile
+        import os
         import firebase_admin
         from firebase_admin import credentials
 
+        # Try JSON env var first (for Render/cloud deployments)
+        if settings.FIREBASE_CREDENTIALS_JSON:
+            cred_dict = json.loads(settings.FIREBASE_CREDENTIALS_JSON)
+            cred = credentials.Certificate(cred_dict)
+            firebase_admin.initialize_app(cred)
+            _firebase_initialized = True
+            logger.info("Firebase Admin SDK initialized from env var")
+            return
+
+        # Fall back to file path (for local development)
         cred_path = settings.FIREBASE_CREDENTIALS_PATH
-        if cred_path:
+        if cred_path and os.path.exists(cred_path):
             cred = credentials.Certificate(cred_path)
             firebase_admin.initialize_app(cred)
             _firebase_initialized = True
-            logger.info("Firebase Admin SDK initialized")
+            logger.info("Firebase Admin SDK initialized from file")
         else:
             logger.warning("Firebase credentials not configured")
     except Exception as e:

@@ -38,6 +38,7 @@ class Settings(BaseSettings):
 
     # --- Firebase (Push Notifications) ---
     FIREBASE_CREDENTIALS_PATH: str = "firebase_credentials.json"
+    FIREBASE_CREDENTIALS_JSON: str = ""  # Paste full JSON content as env var (used when file is unavailable)
     FIREBASE_PROJECT_ID: str = ""
 
     # --- Email (SMTP for verification) ---

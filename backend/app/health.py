@@ -30,8 +30,8 @@ async def health_check():
         await r.aclose()
         checks["redis"] = "ok"
     except Exception as e:
-        checks["redis"] = f"error: {type(e).__name__}"
-        status_code = 503
+        checks["redis"] = f"warning: {type(e).__name__} (non-critical)"
+        # Redis is optional — don't fail health check
 
     return JSONResponse(
         status_code=status_code,

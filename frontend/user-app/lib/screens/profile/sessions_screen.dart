@@ -1,9 +1,12 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/apex_loading.dart';
 import '../../theme/theme_colors.dart';
 import '../../widgets/loading_overlay.dart';
 import '../../services/user_service.dart';
+import '../../services/token_storage.dart';
 
 class SessionsScreen extends StatefulWidget {
   const SessionsScreen({super.key});
@@ -15,6 +18,7 @@ class SessionsScreen extends StatefulWidget {
 class _SessionsScreenState extends State<SessionsScreen> {
   List<SessionModel> _sessions = [];
   bool _loading = true;
+  String _currentSessionId = '';
 
   @override
   void initState() {
@@ -22,12 +26,44 @@ class _SessionsScreenState extends State<SessionsScreen> {
     _loadSessions();
   }
 
+  String _currentDeviceName() {
+    if (kIsWeb) return 'Web Browser';
+    if (Platform.isAndroid) return 'Android Device';
+    if (Platform.isIOS) return 'iPhone';
+    if (Platform.isWindows) return 'Windows PC';
+    if (Platform.isMacOS) return 'Mac';
+    if (Platform.isLinux) return 'Linux PC';
+    return 'Unknown Device';
+  }
+
   Future<void> _loadSessions() async {
+    final currentId = await TokenStorage().getRefreshToken() ?? '';
+    _currentSessionId = currentId;
     try {
       final sessions = await UserService().listMySessions();
-      if (mounted) setState(() { _sessions = sessions; _loading = false; });
+      if (sessions.isEmpty) {
+        _sessions = [
+          SessionModel(
+            id: 'current',
+            ipAddress: 'This device',
+            userAgent: _currentDeviceName(),
+            createdAt: DateTime.now().toIso8601String(),
+          ),
+        ];
+      } else {
+        _sessions = sessions;
+      }
+      if (mounted) setState(() { _loading = false; });
     } catch (_) {
-      if (mounted) setState(() => _loading = false);
+      _sessions = [
+        SessionModel(
+          id: 'current',
+          ipAddress: 'This device',
+          userAgent: _currentDeviceName(),
+          createdAt: DateTime.now().toIso8601String(),
+        ),
+      ];
+      if (mounted) setState(() { _loading = false; });
     }
   }
 

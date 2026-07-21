@@ -82,11 +82,12 @@ class MainActivity : FlutterActivity() {
                 packageManager.getPackageInfo(packageName, android.content.pm.PackageManager.GET_SIGNATURES)
             }
             val signatures = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                packageInfo.signingInfo.apkContentsSigners
+                packageInfo.signingInfo?.apkContentsSigners
             } else {
                 @Suppress("DEPRECATION")
                 packageInfo.signatures
             }
+            if (signatures == null || signatures.isEmpty()) return "unknown"
             val md = java.security.MessageDigest.getInstance("SHA-256")
             md.update(signatures[0].toByteArray())
             val bytes = md.digest()

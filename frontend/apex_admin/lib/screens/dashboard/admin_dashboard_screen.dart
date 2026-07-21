@@ -56,11 +56,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, size: 48, color: AppColors.error),
+              const Icon(Icons.wifi_off_rounded, size: 48, color: AppColors.error),
               const SizedBox(height: 16),
-              Text('Failed to load dashboard', style: TextStyle(fontSize: 16, color: AppColors.subtitle)),
-              const SizedBox(height: 8),
-              Text(_error!, style: const TextStyle(fontSize: 12, color: AppColors.hint)),
+              const Text('Unable to connect', style: TextStyle(fontSize: 16, color: AppColors.subtitle, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              const Text('Check your connection and try again', style: TextStyle(fontSize: 12, color: AppColors.hint)),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () {

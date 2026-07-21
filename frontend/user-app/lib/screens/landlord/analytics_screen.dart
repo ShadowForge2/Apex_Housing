@@ -106,10 +106,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   }
 
   String _formatCurrency(dynamic value) {
-    final num = (value is num) ? value.toInt() : 0;
-    if (num >= 1000000) return '₦${(num / 1000000).toStringAsFixed(1)}M';
-    if (num >= 1000) return '₦${(num / 1000).toStringAsFixed(0)}K';
-    return '₦$num';
+    final amount = (value is num) ? value.toInt() : 0;
+    if (amount >= 1000000) return '₦${(amount / 1000000).toStringAsFixed(1)}M';
+    if (amount >= 1000) return '₦${(amount / 1000).toStringAsFixed(0)}K';
+    return '₦$amount';
   }
 
   Widget _buildSummaryCards() {

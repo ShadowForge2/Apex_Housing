@@ -151,9 +151,11 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.error_outline, size: 48, color: AppColors.error),
+                      const Icon(Icons.wifi_off_rounded, size: 48, color: AppColors.error),
                       const SizedBox(height: 16),
-                      Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.subtitle)),
+                      const Text('Unable to connect', textAlign: TextAlign.center, style: TextStyle(color: AppColors.subtitle, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 4),
+                      const Text('Check your connection and try again', textAlign: TextAlign.center, style: TextStyle(color: AppColors.hint, fontSize: 13)),
                       const SizedBox(height: 16),
                       TextButton(onPressed: _loadProperty, child: const Text('Retry')),
                     ],

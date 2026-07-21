@@ -70,49 +70,11 @@ class _AdminSplashScreenState extends State<AdminSplashScreen>
       color: const Color(0xFF5B21B6),
       child: FadeTransition(
         opacity: _fadeAnimation,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.primaryLight,
-                    AppColors.primary,
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(AppRadius.xl),
-              ),
-              child: const Icon(
-                Icons.admin_panel_settings_rounded,
-                color: Colors.white,
-                size: 56,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'APEX Housing',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                letterSpacing: 1.2,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Admin Panel',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.white70,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ],
+        child: Center(
+          child: Image.asset(
+            'assets/images/apex_no_bg.png',
+            width: 220,
+          ),
         ),
       ),
     );

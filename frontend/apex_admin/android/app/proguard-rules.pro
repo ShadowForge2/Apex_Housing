@@ -33,3 +33,28 @@
 # Preserve the line number information for debugging stack traces
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
+
+# Google Play Core (deferred components) - ignore missing classes
+-dontwarn com.google.android.play.core.splitcompat.SplitCompatApplication
+-dontwarn com.google.android.play.core.splitinstall.**
+-dontwarn com.google.android.play.core.tasks.**
+
+# OkHttp
+-dontwarn okhttp3.**
+-dontwarn okio.**
+-keep class okhttp3.** { *; }
+-keep class okio.** { *; }
+-keepnames class okhttp3.internal.publicsuffix.PublicSuffixDatabase
+
+# Dio / native_http
+-keep class com.squareup.okhttp3.** { *; }
+-keep class com.squareup.okio.** { *; }
+
+# Conscrypt (TLS provider used by OkHttp on Android)
+-dontwarn org.conscrypt.**
+-dontwarn org.bouncycastle.**
+-dontwarn org.openjsse.**
+
+# javax / JSR305 annotations used by OkHttp
+-dontwarn javax.annotation.**
+-keepattributes javax.annotation.*

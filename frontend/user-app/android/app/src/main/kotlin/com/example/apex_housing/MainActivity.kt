@@ -52,8 +52,8 @@ class MainActivity : FlutterActivity() {
 
     private fun checkDebugger(): Boolean {
         return try {
-            val检检测器 = Class.forName("android.os.Debug")
-            val method = 检检测器.getMethod("isDebuggerConnected")
+            val debugClass = Class.forName("android.os.Debug")
+            val method = debugClass.getMethod("isDebuggerConnected")
             method.invoke(null) as Boolean
         } catch (_: Exception) {
             false
@@ -82,11 +82,12 @@ class MainActivity : FlutterActivity() {
                 packageManager.getPackageInfo(packageName, android.content.pm.PackageManager.GET_SIGNATURES)
             }
             val signatures = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                packageInfo.signingInfo.apkContentsSigners
+                packageInfo.signingInfo?.apkContentsSigners
             } else {
                 @Suppress("DEPRECATION")
                 packageInfo.signatures
             }
+            if (signatures == null || signatures.isEmpty()) return "unknown"
             val md = java.security.MessageDigest.getInstance("SHA-256")
             md.update(signatures[0].toByteArray())
             val bytes = md.digest()

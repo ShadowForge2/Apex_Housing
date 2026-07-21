@@ -54,11 +54,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.error_outline, size: 48, color: AppColors.error),
+                      const Icon(Icons.wifi_off_rounded, size: 48, color: AppColors.error),
                       const SizedBox(height: 16),
-                      Text('Failed to load reports', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: tc.text)),
-                      const SizedBox(height: 8),
-                      Text(_error!, style: TextStyle(fontSize: 13, color: tc.subtitle), textAlign: TextAlign.center),
+                      const Text('Unable to connect', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.subtitle)),
+                      const SizedBox(height: 4),
+                      const Text('Check your connection and try again', style: TextStyle(fontSize: 13, color: AppColors.hint)),
                       const SizedBox(height: 20),
                       ElevatedButton(onPressed: _loadReports, child: const Text('Retry')),
                     ],

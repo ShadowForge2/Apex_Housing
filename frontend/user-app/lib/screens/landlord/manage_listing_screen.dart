@@ -62,7 +62,7 @@ class _ManageListingScreenState extends State<ManageListingScreen> {
                     Expanded(
                       child: Text(
                         'This listing has an active booking. Editing and deleting are blocked until the transaction is completed.',
-                        style: TextStyle(fontSize: 13, color: AppColors.warning.shade700, height: 1.4),
+                        style: TextStyle(fontSize: 13, color: AppColors.warning, height: 1.4),
                       ),
                     ),
                   ],

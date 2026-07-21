@@ -9,11 +9,9 @@ from sqlalchemy.orm import declarative_base
 
 from app.config import settings
 
-# Supabase pooler uses pgbouncer in transaction mode —
-# prepared statements are not supported, must disable them.
-connect_args = {}
-if "pooler.supabase.com" in settings.DATABASE_URL or "supabase.co" in settings.DATABASE_URL:
-    connect_args["statement_cache_size"] = 0
+# Disable prepared statement caching — required for pgbouncer (transaction mode)
+# used by Supabase pooler, Render, and most managed Postgres providers.
+connect_args = {"statement_cache_size": 0}
 
 engine = create_async_engine(
     settings.DATABASE_URL,

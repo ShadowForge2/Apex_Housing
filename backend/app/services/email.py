@@ -50,10 +50,7 @@ class SMTPEmailProvider(EmailProvider):
         self.username = settings.SMTP_USERNAME
         self.password = settings.SMTP_PASSWORD
         self.from_name = settings.SMTP_FROM_NAME
-        if "gmail" in self.host:
-            self.from_email = self.username
-        else:
-            self.from_email = settings.SMTP_FROM_EMAIL or self.username
+        self.from_email = settings.SMTP_FROM_EMAIL or self.username
 
     async def send(self, to: str, subject: str, html: str, text: str = None) -> bool:
         try:

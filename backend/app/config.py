@@ -54,6 +54,9 @@ class Settings(BaseSettings):
     SENDGRID_API_KEY: str = ""
     SENDGRID_FROM_EMAIL: str = ""
 
+    # --- Resend (Email API) ---
+    RESEND_API_KEY: str = ""
+
     # --- Google Maps (Geocoding + Places) ---
     GOOGLE_MAPS_API_KEY: str = ""
 

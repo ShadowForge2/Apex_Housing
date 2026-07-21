@@ -85,6 +85,42 @@ class SMTPEmailProvider(EmailProvider):
             server.sendmail(self.from_email, to, msg.as_string())
 
 
+class ResendEmailProvider(EmailProvider):
+    def __init__(self):
+        self.api_key = settings.RESEND_API_KEY
+        self.from_email = settings.SMTP_FROM_EMAIL or "support@apex-housing.online"
+        self.from_name = settings.SMTP_FROM_NAME or "APEX Housing"
+
+    async def send(self, to: str, subject: str, html: str, text: str = None) -> bool:
+        payload = {
+            "from": f"{self.from_name} <{self.from_email}>",
+            "to": [to],
+            "subject": subject,
+            "html": html,
+        }
+        if text:
+            payload["text"] = text
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "https://api.resend.com/emails",
+                json=payload,
+                headers=headers,
+                timeout=30,
+            )
+            if response.status_code in (200, 201):
+                data = response.json()
+                logger.info(f"Resend email sent to {to}: {subject} (id={data.get('id', '?')})")
+                return True
+            logger.error(f"Resend error: {response.status_code} {response.text}")
+            return False
+
+
 class SendGridEmailProvider(EmailProvider):
     def __init__(self):
         self.api_key = settings.SENDGRID_API_KEY
@@ -132,7 +168,10 @@ class EmailService:
             and settings.SMTP_PASSWORD not in {"your-app-password", "your_app_password", ""}
         )
 
-        if settings.EMAIL_PROVIDER == "sendgrid" and settings.SENDGRID_API_KEY:
+        if settings.RESEND_API_KEY:
+            self.provider = ResendEmailProvider()
+            logger.info("Email provider: Resend")
+        elif settings.EMAIL_PROVIDER == "sendgrid" and settings.SENDGRID_API_KEY:
             self.provider = SendGridEmailProvider()
             logger.info("Email provider: SendGrid")
         elif settings.ENVIRONMENT == "development" or not smtp_valid:

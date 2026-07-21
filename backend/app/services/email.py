@@ -3,6 +3,7 @@ Email service supporting SMTP, SendGrid, and Console (development).
 All emails are wrapped with APEX Housing branded template.
 """
 import logging
+import asyncio
 from typing import Optional
 from abc import ABC, abstractmethod
 
@@ -48,34 +49,40 @@ class SMTPEmailProvider(EmailProvider):
         self.port = settings.SMTP_PORT
         self.username = settings.SMTP_USERNAME
         self.password = settings.SMTP_PASSWORD
-        self.from_email = settings.SMTP_FROM_EMAIL
         self.from_name = settings.SMTP_FROM_NAME
+        if "gmail" in self.host:
+            self.from_email = self.username
+        else:
+            self.from_email = settings.SMTP_FROM_EMAIL or self.username
 
     async def send(self, to: str, subject: str, html: str, text: str = None) -> bool:
-        import smtplib
-        from email.mime.text import MIMEText
-        from email.mime.multipart import MIMEMultipart
-
         try:
-            msg = MIMEMultipart("alternative")
-            msg["Subject"] = subject
-            msg["From"] = f"{self.from_name} <{self.from_email}>"
-            msg["To"] = to
-
-            if text:
-                msg.attach(MIMEText(text, "plain"))
-            msg.attach(MIMEText(html, "html"))
-
-            with smtplib.SMTP(self.host, self.port) as server:
-                server.starttls()
-                server.login(self.username, self.password)
-                server.sendmail(self.from_email, to, msg.as_string())
-
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, self._send_sync, to, subject, html, text)
             logger.info(f"Email sent to {to}: {subject}")
             return True
         except Exception as e:
             logger.error(f"SMTP error sending to {to}: {e}")
             return False
+
+    def _send_sync(self, to: str, subject: str, html: str, text: str = None) -> None:
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = f"{self.from_name} <{self.from_email}>"
+        msg["To"] = to
+
+        if text:
+            msg.attach(MIMEText(text, "plain"))
+        msg.attach(MIMEText(html, "html"))
+
+        with smtplib.SMTP(self.host, self.port, timeout=15) as server:
+            server.starttls()
+            server.login(self.username, self.password)
+            server.sendmail(self.from_email, to, msg.as_string())
 
 
 class SendGridEmailProvider(EmailProvider):
@@ -133,7 +140,7 @@ class EmailService:
             logger.info("Email provider: CONSOLE (emails printed to log)")
         else:
             self.provider = SMTPEmailProvider()
-            logger.info("Email provider: SMTP")
+            logger.info(f"Email provider: SMTP ({settings.SMTP_USERNAME})")
 
     async def send(self, to: str, subject: str, html: str, text: str = None) -> bool:
         return await self.provider.send(to, subject, html, text)

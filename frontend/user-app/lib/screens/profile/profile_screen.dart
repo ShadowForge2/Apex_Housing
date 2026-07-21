@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:math' as math;
 import 'package:dio/dio.dart';
 import '../../theme/app_colors.dart';
@@ -146,7 +147,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       _darkModeAnimController.reverse();
     }
 
-    return SingleChildScrollView(
+    return Scaffold(
+      backgroundColor: tc.background,
+      body: SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         children: [
@@ -238,7 +241,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   ),
                 ),
                 GestureDetector(
-                  onTap: () => _showToast('User ID copied to clipboard'),
+                  onTap: () async {
+                    await Clipboard.setData(ClipboardData(text: _profile?.id ?? ''));
+                    _showToast('User ID copied to clipboard');
+                  },
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
@@ -367,7 +373,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           const SizedBox(height: 48),
         ],
       ),
-    );
+    ));
   }
 
   Future<void> _editField(String fieldName, String? currentValue, Function(String) onSave) async {

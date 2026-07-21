@@ -130,9 +130,11 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline, size: 48, color: Colors.grey[400]),
+            Icon(Icons.wifi_off_rounded, size: 48, color: Colors.grey[400]),
             const SizedBox(height: 12),
-            Text('Failed to load favorites', style: TextStyle(color: Colors.grey[600])),
+            Text('Unable to connect', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w600)),
+            const SizedBox(height: 4),
+            Text('Check your connection and try again', style: TextStyle(color: Colors.grey[500], fontSize: 13)),
             const SizedBox(height: 8),
             TextButton(onPressed: _fetchFavorites, child: const Text('Retry')),
           ],

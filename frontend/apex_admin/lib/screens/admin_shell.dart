@@ -407,9 +407,10 @@ class _AdminShellState extends State<AdminShell> {
   }
 
   Widget _buildTopHeader() {
+    final topPadding = MediaQuery.of(context).padding.top;
     return Container(
-      height: 64,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      height: 64 + topPadding,
+      padding: EdgeInsets.fromLTRB(24, topPadding, 24, 0),
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(

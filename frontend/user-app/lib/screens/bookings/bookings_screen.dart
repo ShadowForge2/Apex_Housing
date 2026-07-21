@@ -196,9 +196,9 @@ class _BookingsScreenState extends State<BookingsScreen> {
               child: const Icon(Icons.error_outline, size: 32, color: AppColors.error),
             ),
             const SizedBox(height: 16),
-            Text('Failed to load bookings', style: TextStyle(color: tc.subtitle, fontSize: 15, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
-            Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: tc.hint, fontSize: 13)),
+            Text('Unable to connect', style: TextStyle(color: tc.subtitle, fontSize: 15, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 4),
+            Text('Check your connection and try again', style: TextStyle(color: tc.hint, fontSize: 13)),
             const SizedBox(height: 20),
             GestureDetector(
               onTap: _fetchBookings,

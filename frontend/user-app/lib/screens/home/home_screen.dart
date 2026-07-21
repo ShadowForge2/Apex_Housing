@@ -451,9 +451,11 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.error_outline, size: 48, color: Colors.grey[400]),
+              Icon(Icons.wifi_off_rounded, size: 48, color: Colors.grey[400]),
               const SizedBox(height: 12),
-              Text('Failed to load properties', style: TextStyle(color: Colors.grey[600])),
+              Text('Unable to connect', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              Text('Check your connection and try again', style: TextStyle(color: Colors.grey[500], fontSize: 13)),
               const SizedBox(height: 8),
               TextButton(onPressed: _fetchProperties, child: const Text('Retry')),
             ],
@@ -508,26 +510,25 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildPopularLocations(ThemeColors tc) {
-    List<Map<String, String>> locations;
-    if (_properties.length >= 4) {
-      locations = [
-        {'name': _properties[0].city.isNotEmpty ? _properties[0].city : 'Lekki', 'count': '${_properties.length}', 'image': _properties[0].images.first},
-        {'name': _properties[1].city.isNotEmpty ? _properties[1].city : 'Victoria Island', 'count': '${_properties.length}', 'image': _properties[1].images.first},
-        {'name': _properties[3].city.isNotEmpty ? _properties[3].city : 'Ikoyi', 'count': '${_properties.length}', 'image': _properties[3].images.first},
-      ];
-    } else if (_properties.isNotEmpty) {
-      locations = _properties.take(3).map((p) => {
-        'name': p.city.isNotEmpty ? p.city : 'Location',
-        'count': '${_properties.length}',
-        'image': p.images.first,
-      }).toList();
-    } else {
-      locations = [
-        {'name': 'Lekki', 'count': '0', 'image': ''},
-        {'name': 'Victoria Island', 'count': '0', 'image': ''},
-        {'name': 'Ikoyi', 'count': '0', 'image': ''},
-      ];
+    const targetCities = ['Unilorin', 'Kwasu', 'Kwarapoly'];
+    final Map<String, int> cityCounts = {};
+    final Map<String, String> cityImages = {};
+    for (final p in _properties) {
+      for (final city in targetCities) {
+        if (p.city.toLowerCase().contains(city.toLowerCase())) {
+          cityCounts[city] = (cityCounts[city] ?? 0) + 1;
+          if (!cityImages.containsKey(city) && p.images.isNotEmpty) {
+            cityImages[city] = p.images.first;
+          }
+        }
+      }
     }
+
+    final locations = targetCities.map((city) => {
+      'name': city,
+      'count': '${cityCounts[city] ?? 0}',
+      'image': cityImages[city] ?? '',
+    }).toList();
 
     return SizedBox(
       height: 120,

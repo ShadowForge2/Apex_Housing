@@ -51,6 +51,9 @@ class SMTPEmailProvider(EmailProvider):
         self.password = settings.SMTP_PASSWORD
         self.from_name = settings.SMTP_FROM_NAME
         self.from_email = settings.SMTP_FROM_EMAIL or self.username
+        if "gmail" in self.host and "@" in self.from_email and self.from_email != self.username:
+            logger.warning(f"Gmail SMTP detected but FROM '{self.from_email}' != username '{self.username}'. Using username as FROM.")
+            self.from_email = self.username
 
     async def send(self, to: str, subject: str, html: str, text: str = None) -> bool:
         try:

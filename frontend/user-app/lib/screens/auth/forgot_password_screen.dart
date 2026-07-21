@@ -111,7 +111,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           await AuthService().requestPasswordReset(
                             email: _emailController.text.trim(),
                           );
-                          if (mounted) setState(() { _step = 2; _isLoading = false; });
+                          if (mounted) {
+                            setState(() { _step = 2; _isLoading = false; });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Reset code sent to your email'), backgroundColor: AppColors.success),
+                            );
+                          }
                         } on Exception catch (e) {
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(

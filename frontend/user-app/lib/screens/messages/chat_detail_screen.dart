@@ -64,7 +64,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load messages: $e')),
+          const SnackBar(content: Text('Unable to load messages. Check your connection.')),
         );
       }
     } finally {
@@ -111,7 +111,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             _showModerationWarning(msg);
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Failed to send: $e')),
+              const SnackBar(content: Text('Failed to send message')),
             );
           }
         }

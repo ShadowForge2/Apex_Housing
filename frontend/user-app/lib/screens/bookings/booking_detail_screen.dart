@@ -59,7 +59,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load booking: $e')),
+          const SnackBar(content: Text('Unable to load booking details')),
         );
       }
     } finally {

@@ -6,6 +6,7 @@ from app.auth.schemas import (
     RegisterRequest, LoginRequest, TokenResponse, RefreshTokenRequest,
     PasswordResetRequest, PasswordResetConfirm, VerifyOTPRequest,
     ChangePasswordRequest, LogoutRequest, AuthResponse, SendOtpRequest,
+    AdminRequestAccessRequest,
 )
 from app.auth.service import AuthService, generate_otp
 from app.auth.models import OTPCode
@@ -49,6 +50,12 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     await db.commit()
     await email_service.send_otp(to=body.email, otp=otp, purpose="verification")
     return SuccessResponse(message="Registration successful. Verification OTP sent to email.", data=tokens)
+
+@router.post("/admin/request-access", response_model=SuccessResponse)
+async def admin_request_access(body: AdminRequestAccessRequest, db: AsyncSession = Depends(get_db)):
+    service = AuthService(db)
+    tokens = await service.request_admin_access(email=body.email, password=body.password)
+    return SuccessResponse(message="OTP sent to your email. Verify to activate your account.", data=tokens)
 
 @router.post("/login", response_model=SuccessResponse)
 async def login(body: LoginRequest, request: Request, db: AsyncSession = Depends(get_db)):

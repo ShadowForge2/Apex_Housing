@@ -325,3 +325,44 @@ class AuthService:
         if not user.is_active:
             raise Unauthorized("Account is deactivated")
         return user
+
+    async def request_admin_access(self, email: str, password: str) -> dict:
+        result = await self.db.execute(select(User).where(User.email == email))
+        user = result.scalar_one_or_none()
+        if not user:
+            raise NotFound("No invitation found for this email. Contact the super admin.")
+        if user.role != UserRole.ADMIN:
+            raise BadRequest("This email is not registered as an admin.")
+        if user.is_verified:
+            raise Conflict("Account already activated. Please login.")
+        if not user.is_active:
+            raise Unauthorized("Account is deactivated. Contact the super admin.")
+
+        user.password_hash = hash_password(password)
+        await self.db.commit()
+
+        otp = generate_otp()
+        otp_record = OTPCode(
+            id=uuid4(),
+            user_id=user.id,
+            code=hashlib.sha256(otp.encode()).hexdigest(),
+            purpose="verify",
+            is_used=False,
+            expires_at=_utcnow() + timedelta(minutes=10),
+        )
+        self.db.add(otp_record)
+        await self.db.commit()
+        await email_service.send_otp(to=email, otp=otp, purpose="verification")
+
+        access_token = create_access_token(user.id, user.role)
+        refresh_token = create_refresh_token(user.id)
+
+        return {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer",
+            "expires_in": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            "user_id": str(user.id),
+            "role": str(user.role),
+            "is_super_admin": user.is_super_admin,
+        }

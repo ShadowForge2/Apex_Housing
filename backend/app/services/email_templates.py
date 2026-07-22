@@ -457,7 +457,38 @@ def admin_invite_email(invited_by: str = "Super Admin") -> str:
             </td>
         </tr>
     </table>
-    <p style="margin: 0 0 20px; color: {TEXT_COLOR};">To get started, please sign in using your email and set up your password via the forgot password option.</p>
-    <p style="margin: 0; color: {TEXT_COLOR};">Best regards,<br><strong style="color: {PRIMARY_COLOR};">The APEX Housing Team</strong></p>
+    <p style="margin: 0 0 12px; color: {TEXT_COLOR}; font-weight: 600;">Next Steps:</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 24px;">
+        <tr>
+            <td width="30" style="vertical-align: top; padding: 6px 0;">
+                <div style="width: 22px; height: 22px; border-radius: 50%; background-color: {PRIMARY_COLOR}; color: white; font-size: 12px; text-align: center; line-height: 22px;">1</div>
+            </td>
+            <td style="padding: 6px 0 6px 12px; color: {TEXT_COLOR};">Download the APEX Housing Admin app</td>
+        </tr>
+        <tr>
+            <td width="30" style="vertical-align: top; padding: 6px 0;">
+                <div style="width: 22px; height: 22px; border-radius: 50%; background-color: {PRIMARY_COLOR}; color: white; font-size: 12px; text-align: center; line-height: 22px;">2</div>
+            </td>
+            <td style="padding: 6px 0 6px 12px; color: {TEXT_COLOR};">Tap <strong>"Request Access"</strong> and enter this email address</td>
+        </tr>
+        <tr>
+            <td width="30" style="vertical-align: top; padding: 6px 0;">
+                <div style="width: 22px; height: 22px; border-radius: 50%; background-color: {PRIMARY_COLOR}; color: white; font-size: 12px; text-align: center; line-height: 22px;">3</div>
+            </td>
+            <td style="padding: 6px 0 6px 12px; color: {TEXT_COLOR};">Verify with the OTP sent to this email and set your password</td>
+        </tr>
+    </table>
+    <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+            <td>
+                <a href="https://play.google.com/store/apps/details?id=com.apexhousing.admin" style="display: inline-block; background: linear-gradient(135deg, {PRIMARY_COLOR}, {PRIMARY_DARK}); color: {WHITE};
+                   padding: 14px 32px; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 15px; font-family: 'Helvetica Neue', Arial, sans-serif;">
+                    Download Admin App
+                </a>
+            </td>
+        </tr>
+    </table>
+    <p style="color: {MUTED_COLOR}; margin: 20px 0 0; font-size: 13px;">If the button doesn't work, search for <strong>"APEX Housing Admin"</strong> on the Google Play Store.</p>
+    <p style="margin: 20px 0 0; color: {TEXT_COLOR};">Best regards,<br><strong style="color: {PRIMARY_COLOR};">The APEX Housing Team</strong></p>
     """
     return wrap_email(content)

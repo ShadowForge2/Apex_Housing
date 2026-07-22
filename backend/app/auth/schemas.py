@@ -51,6 +51,10 @@ class SendOtpRequest(BaseModel):
 class LogoutRequest(BaseModel):
     refresh_token: str
 
+class AdminRequestAccessRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=8)
+
 class AuthResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: UUID

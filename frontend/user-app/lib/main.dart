@@ -20,6 +20,7 @@ import 'screens/profile/bank_account_screen.dart';
 import 'screens/profile/signature_screen.dart';
 import 'services/token_storage.dart';
 import 'services/api_client.dart';
+import 'services/user_service.dart';
 import 'services/deep_link_service.dart';
 import 'services/locale_service.dart';
 import 'services/security_service.dart';
@@ -90,10 +91,24 @@ class _ApexHousingAppState extends State<ApexHousingApp> {
       if (lastRole != null) {
         final role = lastRole.toUpperCase() == 'LANDLORD' ? UserRole.landlord : UserRole.tenant;
         if (mounted) setState(() { _currentRole = role; _roleLoaded = true; });
+        _syncRoleFromServer();
         return;
       }
     }
     if (mounted) setState(() => _roleLoaded = true);
+  }
+
+  Future<void> _syncRoleFromServer() async {
+    try {
+      final profile = await UserService().getMyProfile();
+      final serverRole = profile.role?.toUpperCase();
+      if (serverRole == null) return;
+      final correctRole = serverRole == 'LANDLORD' ? UserRole.landlord : UserRole.tenant;
+      if (mounted && _currentRole != correctRole) {
+        setState(() => _currentRole = correctRole);
+        await TokenStorage().saveLastActiveRole(serverRole);
+      }
+    } catch (_) {}
   }
 
   void _switchRole() {

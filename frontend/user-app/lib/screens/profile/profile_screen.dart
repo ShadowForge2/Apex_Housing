@@ -307,7 +307,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               onTap: () async {
                 final targetRole = isLandlord ? UserRole.tenant : UserRole.landlord;
                 final isFirstTime = !_visitedRoles.contains(targetRole);
-                final roleStr = targetRole == UserRole.landlord ? 'landlord' : 'tenant';
+                final roleStr = targetRole == UserRole.landlord ? 'LANDLORD' : 'TENANT';
                 showApexLoading(context, duration: const Duration(seconds: 30), label: 'Switching profile...');
                 try {
                   await ApiClient.instance.post('/users/switch-role', data: {'role': roleStr});
@@ -325,11 +325,35 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                     _showToast('Switched to ${targetRole == UserRole.landlord ? "Landlord" : "Tenant"} profile');
                   }
                 } catch (e) {
-                  dismissApexLoading();
-                  if (!mounted) return;
                   final msg = e.toString();
                   final isAlready = msg.contains('Already');
-                  _showToast(isAlready ? 'Role already set to $roleStr' : 'Failed to switch role: $msg');
+                  if (isAlready) {
+                    dismissApexLoading();
+                    if (!mounted) return;
+                    role.switchRole();
+                    _visitedRoles.add(targetRole);
+                    _showToast('Role already set to ${targetRole == UserRole.landlord ? "Landlord" : "Tenant"}');
+                    return;
+                  }
+                  final isServerError = msg.contains('Server error') || msg.contains('Internal server error') || msg.contains('500');
+                  if (isServerError) {
+                    try {
+                      final profile = await UserService().getMyProfile();
+                      final serverRole = profile.role?.toUpperCase();
+                      final targetServerRole = targetRole == UserRole.landlord ? 'LANDLORD' : 'TENANT';
+                      if (!mounted) { dismissApexLoading(); return; }
+                      if (serverRole == targetServerRole) {
+                        role.switchRole();
+                        _visitedRoles.add(targetRole);
+                        dismissApexLoading();
+                        _showToast('Switched to ${targetRole == UserRole.landlord ? "Landlord" : "Tenant"} profile');
+                        return;
+                      }
+                    } catch (_) {}
+                  }
+                  dismissApexLoading();
+                  if (!mounted) return;
+                  _showToast('Failed to switch role: $msg');
                 }
               },
               highlight: true,

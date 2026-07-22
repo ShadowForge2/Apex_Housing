@@ -237,26 +237,37 @@ class AdminService:
         }
 
     async def list_all_users(self, page: int = 1, page_size: int = 20, role: str = None) -> dict:
-        query = select(User).outerjoin(Profile, User.id == Profile.user_id)
-        if role:
-            query = query.where(User.role == role)
+        from sqlalchemy.orm import selectinload
 
-        count_result = await self.db.execute(select(func.count()).select_from(query.subquery()))
+        base_query = select(User)
+        if role:
+            base_query = base_query.where(User.role == role)
+
+        count_result = await self.db.execute(select(func.count()).select_from(base_query.subquery()))
         total = count_result.scalar()
-        query = query.order_by(User.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
+
+        query = (
+            base_query
+            .options(selectinload(User.profile))
+            .order_by(User.created_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
         result = await self.db.execute(query)
-        rows = result.unique().all()
+        users_orm = result.unique().scalars().all()
 
         users = []
-        for row in rows:
-            u = row[0] if isinstance(row, tuple) else row
-            profile = getattr(u, 'profile', None)
+        for u in users_orm:
+            profile = u.profile
+            first_name = profile.first_name if profile and profile.first_name else ""
+            last_name = profile.last_name if profile and profile.last_name else ""
+            name = f"{first_name} {last_name}".strip()
             users.append({
                 "id": str(u.id),
-                "email": u.email,
-                "first_name": profile.first_name if profile else "",
-                "last_name": profile.last_name if profile else "",
-                "phone": profile.phone_number if profile else "",
+                "email": u.email or "",
+                "first_name": first_name,
+                "last_name": last_name,
+                "phone": profile.phone_number if profile and profile.phone_number else "",
                 "city": "",
                 "role": str(u.role.value) if hasattr(u.role, 'value') else str(u.role),
                 "status": "Active" if u.is_active else "Suspended",
@@ -264,7 +275,7 @@ class AdminService:
                 "is_verified": u.is_verified,
                 "is_super_admin": u.is_super_admin,
                 "total_bookings": 0,
-                "created_at": str(u.created_at),
+                "created_at": str(u.created_at) if u.created_at else "",
             })
 
         return {"total": total, "users": users, "page": page, "page_size": page_size}

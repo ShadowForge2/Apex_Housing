@@ -258,7 +258,7 @@ class AuthService:
             code=hashlib.sha256(otp.encode()).hexdigest(),
             purpose="reset",
             is_used=False,
-            expires_at=_utcnow() + timedelta(minutes=15),
+            expires_at=_utcnow() + timedelta(minutes=10),
         )
         self.db.add(otp_record)
         await self.db.commit()

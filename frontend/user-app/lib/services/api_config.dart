@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 class ApiConfig {
   // Use --dart-define=BASE_URL=https://apex-housing-api.onrender.com at build time.
   // In debug mode, falls back to localhost for local development.

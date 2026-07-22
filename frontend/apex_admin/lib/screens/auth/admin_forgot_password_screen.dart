@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/loading_overlay.dart';
@@ -25,6 +26,10 @@ class _AdminForgotPasswordScreenState extends State<AdminForgotPasswordScreen> {
   String _email = '';
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
+  bool _otpComplete = false;
+
+  int _cooldownSeconds = 60;
+  Timer? _cooldownTimer;
 
   @override
   void dispose() {
@@ -39,7 +44,24 @@ class _AdminForgotPasswordScreenState extends State<AdminForgotPasswordScreen> {
     _confirmPasswordController.dispose();
     _passwordFocusNode.dispose();
     _confirmPasswordFocusNode.dispose();
+    _cooldownTimer?.cancel();
     super.dispose();
+  }
+
+  void _startCooldown() {
+    _cooldownTimer?.cancel();
+    _cooldownSeconds = 60;
+    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_cooldownSeconds > 0) {
+        setState(() => _cooldownSeconds--);
+      } else {
+        timer.cancel();
+      }
+    });
   }
 
   Future<void> _sendOtp() async {
@@ -70,9 +92,40 @@ class _AdminForgotPasswordScreenState extends State<AdminForgotPasswordScreen> {
         _email = email;
         _step = 2;
       });
+      _startCooldown();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Reset code sent to $email'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    }
+  }
+
+  Future<void> _resendOtp() async {
+    if (_cooldownSeconds > 0) return;
+
+    bool success = false;
+    await runWithLoading(
+      context,
+      action: () async {
+        try {
+          await AdminAuthService().requestPasswordReset(email: _email);
+          success = true;
+        } on ApiException catch (e) {
+          if (mounted) _showError(e.message);
+        } catch (e) {
+          if (mounted) _showError('Failed to resend code. Please try again.');
+        }
+      },
+      message: 'Resending code...',
+    );
+
+    if (success && mounted) {
+      _startCooldown();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Code resent to $_email'),
           backgroundColor: AppColors.success,
         ),
       );
@@ -120,6 +173,7 @@ class _AdminForgotPasswordScreenState extends State<AdminForgotPasswordScreen> {
     );
 
     if (success && mounted) {
+      _cooldownTimer?.cancel();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Password reset successful! Please login.'),
@@ -152,6 +206,7 @@ class _AdminForgotPasswordScreenState extends State<AdminForgotPasswordScreen> {
               GestureDetector(
                 onTap: () {
                   if (_step == 2) {
+                    _cooldownTimer?.cancel();
                     setState(() => _step = 1);
                   } else {
                     widget.onComplete();
@@ -251,6 +306,8 @@ class _AdminForgotPasswordScreenState extends State<AdminForgotPasswordScreen> {
   }
 
   Widget _buildResetStep() {
+    final bool canResend = _cooldownSeconds == 0;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -270,6 +327,7 @@ class _AdminForgotPasswordScreenState extends State<AdminForgotPasswordScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: List.generate(6, (i) {
+            final isComplete = _otpComplete;
             return SizedBox(
               width: 48,
               height: 56,
@@ -286,15 +344,24 @@ class _AdminForgotPasswordScreenState extends State<AdminForgotPasswordScreen> {
                   fillColor: AppColors.surface,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppRadius.md),
-                    borderSide: const BorderSide(color: AppColors.border),
+                    borderSide: BorderSide(
+                      color: isComplete ? AppColors.success : AppColors.border,
+                      width: isComplete ? 2 : 1,
+                    ),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppRadius.md),
-                    borderSide: const BorderSide(color: AppColors.border),
+                    borderSide: BorderSide(
+                      color: isComplete ? AppColors.success : AppColors.border,
+                      width: isComplete ? 2 : 1,
+                    ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppRadius.md),
-                    borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                    borderSide: BorderSide(
+                      color: isComplete ? AppColors.success : AppColors.primary,
+                      width: 2,
+                    ),
                   ),
                 ),
                 onChanged: (val) {
@@ -303,10 +370,57 @@ class _AdminForgotPasswordScreenState extends State<AdminForgotPasswordScreen> {
                   } else if (val.isEmpty && i > 0) {
                     _otpFocusNodes[i - 1].requestFocus();
                   }
+
+                  final code = _otpControllers.map((c) => c.text).join();
+                  final nowComplete = code.length == 6;
+                  if (nowComplete != _otpComplete) {
+                    setState(() => _otpComplete = nowComplete);
+                    if (nowComplete) {
+                      _confirmPasswordFocusNode.requestFocus();
+                    }
+                  }
                 },
               ),
             );
           }),
+        ),
+
+        const SizedBox(height: 16),
+
+        if (_otpComplete)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.check_circle, color: AppColors.success, size: 18),
+              const SizedBox(width: 6),
+              Text(
+                'Code verified',
+                style: TextStyle(color: AppColors.success, fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+
+        Center(
+          child: canResend
+              ? GestureDetector(
+                  onTap: _resendOtp,
+                  child: const Text(
+                    'Resend Code',
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                )
+              : Text(
+                  'Resend code in ${_cooldownSeconds}s',
+                  style: TextStyle(
+                    color: AppColors.subtitle,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
         ),
 
         const SizedBox(height: 32),

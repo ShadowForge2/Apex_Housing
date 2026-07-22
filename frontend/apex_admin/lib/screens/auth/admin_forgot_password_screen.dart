@@ -134,6 +134,17 @@ class _AdminForgotPasswordScreenState extends State<AdminForgotPasswordScreen> {
 
   String get _otpCode => _otpControllers.map((c) => c.text).join();
 
+  void _updateOtpComplete() {
+    final code = _otpCode;
+    final nowComplete = code.length == 6;
+    if (nowComplete != _otpComplete) {
+      setState(() => _otpComplete = nowComplete);
+      if (nowComplete) {
+        _confirmPasswordFocusNode.requestFocus();
+      }
+    }
+  }
+
   Future<void> _resetPassword() async {
     final otp = _otpCode;
     final password = _passwordController.text;
@@ -342,6 +353,7 @@ class _AdminForgotPasswordScreenState extends State<AdminForgotPasswordScreen> {
                   counterText: '',
                   filled: true,
                   fillColor: AppColors.surface,
+                  contentPadding: EdgeInsets.zero,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppRadius.md),
                     borderSide: BorderSide(
@@ -365,20 +377,27 @@ class _AdminForgotPasswordScreenState extends State<AdminForgotPasswordScreen> {
                   ),
                 ),
                 onChanged: (val) {
+                  // Handle paste: if multiple characters entered at once
+                  if (val.length > 1) {
+                    final digits = val.replaceAll(RegExp(r'[^0-9]'), '');
+                    for (int j = 0; j < 6; j++) {
+                      if (j < digits.length) {
+                        _otpControllers[j].text = digits[j];
+                      }
+                    }
+                    final focusIndex = digits.length < 6 ? digits.length : 5;
+                    _otpFocusNodes[focusIndex].requestFocus();
+                    _updateOtpComplete();
+                    return;
+                  }
+
                   if (val.isNotEmpty && i < 5) {
                     _otpFocusNodes[i + 1].requestFocus();
                   } else if (val.isEmpty && i > 0) {
                     _otpFocusNodes[i - 1].requestFocus();
                   }
 
-                  final code = _otpControllers.map((c) => c.text).join();
-                  final nowComplete = code.length == 6;
-                  if (nowComplete != _otpComplete) {
-                    setState(() => _otpComplete = nowComplete);
-                    if (nowComplete) {
-                      _confirmPasswordFocusNode.requestFocus();
-                    }
-                  }
+                  _updateOtpComplete();
                 },
               ),
             );

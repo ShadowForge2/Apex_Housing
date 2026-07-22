@@ -61,24 +61,25 @@ class CommissionService:
         count_result = await self.db.execute(select(func.count()).select_from(CommissionLog))
         total = count_result.scalar()
         query = (
-            select(CommissionLog)
+            select(CommissionLog, CommissionRule.role_type)
+            .outerjoin(CommissionRule, CommissionLog.commission_rule_id == CommissionRule.id)
             .order_by(CommissionLog.created_at.desc())
             .offset((page - 1) * page_size)
             .limit(page_size)
         )
         result = await self.db.execute(query)
-        logs = result.scalars().all()
+        rows = result.all()
         return {"total": total, "logs": [
             {
                 "id": str(l.id),
                 "booking_ref": str(l.booking_id)[:8] if l.booking_id else "",
-                "role": l.commission_rule.role_type if l.commission_rule else "platform",
+                "role": role_type if role_type else "platform",
                 "amount": float(l.commission_amount),
                 "percentage": float(l.commission_rate),
                 "is_paid": l.status == "paid",
                 "date": str(l.created_at) if l.created_at else None,
             }
-            for l in logs
+            for l, role_type in rows
         ], "page": page, "page_size": page_size}
 
     async def get_agent_commissions(self, agent_id: UUID) -> list:

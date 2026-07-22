@@ -34,18 +34,23 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       if (data != null && mounted) {
         final usersList = data['users'] as List<dynamic>? ?? [];
         setState(() {
-          _users = usersList.map<AdminUser>((u) => AdminUser(
-            name: '${u['first_name'] ?? ''} ${u['last_name'] ?? ''}'.trim(),
-            email: u['email'] as String? ?? '',
-            id: u['id'] as String? ?? '',
-            role: u['role'] as String? ?? 'Tenant',
-            status: u['status'] as String? ?? 'Active',
-            phone: u['phone'] as String? ?? '',
-            city: u['city'] as String? ?? '',
-            joinDate: u['created_at'] as String? ?? '',
-            totalBookings: u['total_bookings'] as int? ?? 0,
-            avatar: ((u['first_name'] as String? ?? '') + (u['last_name'] as String? ?? '')).substring(0, 2).toUpperCase(),
-          )).toList();
+          _users = usersList.map<AdminUser>((u) {
+            final firstName = u['first_name'] as String? ?? '';
+            final lastName = u['last_name'] as String? ?? '';
+            final initials = (firstName.isNotEmpty ? firstName[0] : '') + (lastName.isNotEmpty ? lastName[0] : '');
+            return AdminUser(
+              name: '$firstName $lastName'.trim().isNotEmpty ? '$firstName $lastName'.trim() : u['email'] as String? ?? 'Unknown',
+              email: u['email'] as String? ?? '',
+              id: u['id'] as String? ?? '',
+              role: u['role'] as String? ?? 'Tenant',
+              status: u['status'] as String? ?? 'Active',
+              phone: u['phone'] as String? ?? '',
+              city: u['city'] as String? ?? '',
+              joinDate: u['created_at'] as String? ?? '',
+              totalBookings: u['total_bookings'] as int? ?? 0,
+              avatar: initials.isNotEmpty ? initials.toUpperCase() : (u['email'] as String? ?? 'U').substring(0, 2).toUpperCase(),
+            );
+          }).toList();
           _isLoading = false;
         });
       } else {

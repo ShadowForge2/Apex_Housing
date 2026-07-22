@@ -282,7 +282,7 @@ class ApiClient {
         String message = 'Server error occurred.';
         Map<String, dynamic>? errors;
         if (body is Map<String, dynamic>) {
-          message = body['message']?.toString() ?? message;
+          message = body['message']?.toString() ?? body['detail']?.toString() ?? message;
           errors = body['errors'] as Map<String, dynamic>?;
         }
         return ApiException(

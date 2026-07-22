@@ -59,9 +59,23 @@ async def admin_request_access(body: AdminRequestAccessRequest, db: AsyncSession
 
 @router.post("/login", response_model=SuccessResponse)
 async def login(body: LoginRequest, request: Request, db: AsyncSession = Depends(get_db)):
+    from app.users.models import User as UserModel
+    from sqlalchemy import select as sa_select
+
     service = AuthService(db)
     ip = request.client.host if request.client else ""
     ua = request.headers.get("user-agent", "")
+
+    if body.client_type in ("admin", "user"):
+        result = await db.execute(sa_select(UserModel).where(UserModel.email == body.email))
+        user = result.scalar_one_or_none()
+        if user:
+            is_admin = user.role.value == "ADMIN"
+            if body.client_type == "admin" and not is_admin:
+                raise HTTPException(status_code=403, detail="Admin login required. Please login with your admin account.")
+            if body.client_type == "user" and is_admin:
+                raise HTTPException(status_code=403, detail="Admin account detected. Please login with the admin app.")
+
     tokens = await service.login(email=body.email, password=body.password, ip_address=ip, user_agent=ua)
     return SuccessResponse(message="Login successful", data=tokens)
 

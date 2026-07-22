@@ -26,6 +26,7 @@ class AdminAuthService {
     final response = await _client.post('/auth/login', data: {
       'email': email,
       'password': password,
+      'client_type': 'admin',
     });
 
     final result = _parseResponse(response);

@@ -57,6 +57,7 @@ class AuthService {
       data: {
         'email': email,
         'password': password,
+        'client_type': 'user',
       },
     );
 

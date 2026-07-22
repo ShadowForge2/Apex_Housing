@@ -138,7 +138,7 @@ class ApiClient {
       final body = error.response!.data;
 
       if (body is Map<String, dynamic>) {
-        message = body['message'] as String? ?? 'An error occurred';
+        message = body['message'] as String? ?? body['detail'] as String? ?? 'An error occurred';
         errors = body['errors'] as Map<String, dynamic>?;
       } else {
         message = 'An error occurred';

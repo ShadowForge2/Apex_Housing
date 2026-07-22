@@ -608,7 +608,12 @@ async def send_group_chat_message(
         )
     )
     if not part_check.scalar_one_or_none():
-        raise Forbidden("You are not a member of this group chat")
+        new_part = ConversationParticipant(
+            id=_uuid(), conversation_id=conv.id,
+            user_id=user.id, unread_count=0,
+        )
+        db.add(new_part)
+        await db.flush()
 
     message = Message(
         id=_uuid(), conversation_id=conv.id,
@@ -685,7 +690,12 @@ async def get_group_chat_messages(
         )
     )
     if not part_check.scalar_one_or_none():
-        raise Forbidden("You are not a member of this group chat")
+        new_part = ConversationParticipant(
+            id=_uuid(), conversation_id=conv.id,
+            user_id=user.id, unread_count=0,
+        )
+        db.add(new_part)
+        await db.flush()
 
     query = select(Message).where(
         Message.conversation_id == conv.id,

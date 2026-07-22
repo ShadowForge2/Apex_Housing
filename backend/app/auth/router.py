@@ -70,7 +70,7 @@ async def login(body: LoginRequest, request: Request, db: AsyncSession = Depends
         result = await db.execute(sa_select(UserModel).where(UserModel.email == body.email))
         user = result.scalar_one_or_none()
         if user:
-            is_admin = user.role.value == "ADMIN"
+            is_admin = str(user.role) == "ADMIN"
             if body.client_type == "admin" and not is_admin:
                 raise HTTPException(status_code=403, detail="Admin login required. Please login with your admin account.")
             if body.client_type == "user" and is_admin:

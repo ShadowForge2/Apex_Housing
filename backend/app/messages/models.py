@@ -19,7 +19,6 @@ class Conversation(BaseModelIdOnlyMixin, Base):
         nullable=True,
     )
     conversation_type: Mapped[str] = mapped_column(String(30), default="direct", nullable=False)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     last_message_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

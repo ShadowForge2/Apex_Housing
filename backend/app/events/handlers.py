@@ -608,7 +608,6 @@ async def on_message_sent(data: MessageSentEvent):
                 select(ConversationParticipant).where(
                     ConversationParticipant.conversation_id == data.conversation_id,
                     ConversationParticipant.user_id != data.sender_id,
-                    ConversationParticipant.is_active == True,
                 )
             )
             participants = result.scalars().all()

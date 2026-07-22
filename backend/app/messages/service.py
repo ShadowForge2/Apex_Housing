@@ -176,7 +176,6 @@ class MessageService:
             .join(Conversation, ConversationParticipant.conversation_id == Conversation.id)
             .where(
                 ConversationParticipant.user_id.in_(admin_ids),
-                Conversation.is_active == True,
                 Conversation.conversation_type != "admin_group",
                 Conversation.booking_id.isnot(None),
             )

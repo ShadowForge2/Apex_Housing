@@ -237,7 +237,7 @@ class AdminService:
         }
 
     async def list_all_users(self, page: int = 1, page_size: int = 20, role: str = None) -> dict:
-        query = select(User)
+        query = select(User).outerjoin(Profile, User.id == Profile.user_id)
         if role:
             query = query.where(User.role == role)
 
@@ -245,11 +245,29 @@ class AdminService:
         total = count_result.scalar()
         query = query.order_by(User.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
         result = await self.db.execute(query)
-        users = result.scalars().all()
-        return {"total": total, "users": [
-            {"id": str(u.id), "email": u.email, "role": str(u.role), "is_active": u.is_active, "is_verified": u.is_verified, "is_super_admin": u.is_super_admin, "created_at": str(u.created_at)}
-            for u in users
-        ], "page": page, "page_size": page_size}
+        rows = result.unique().all()
+
+        users = []
+        for row in rows:
+            u = row[0] if isinstance(row, tuple) else row
+            profile = getattr(u, 'profile', None)
+            users.append({
+                "id": str(u.id),
+                "email": u.email,
+                "first_name": profile.first_name if profile else "",
+                "last_name": profile.last_name if profile else "",
+                "phone": profile.phone_number if profile else "",
+                "city": "",
+                "role": str(u.role.value) if hasattr(u.role, 'value') else str(u.role),
+                "status": "Active" if u.is_active else "Suspended",
+                "is_active": u.is_active,
+                "is_verified": u.is_verified,
+                "is_super_admin": u.is_super_admin,
+                "total_bookings": 0,
+                "created_at": str(u.created_at),
+            })
+
+        return {"total": total, "users": users, "page": page, "page_size": page_size}
 
     async def get_user_detail(self, user_id: UUID) -> dict:
         result = await self.db.execute(select(User).where(User.id == user_id))

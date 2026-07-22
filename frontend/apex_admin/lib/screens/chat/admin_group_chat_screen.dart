@@ -107,26 +107,41 @@ class _AdminGroupChatScreenState extends State<AdminGroupChatScreen> {
     final text = _controller.text.trim();
     if (text.isEmpty || _isSending) return;
 
-    setState(() => _isSending = true);
+    final tempId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
+    final sentAt = DateTime.now().toIso8601String();
+    setState(() {
+      _isSending = true;
+      _messages.add({
+        'id': tempId,
+        'content': text,
+        'sender_id': _currentUserId,
+        'sender_name': _getMyName(),
+        'created_at': sentAt,
+      });
+    });
     _controller.clear();
+    _scrollToBottom();
 
     try {
       final result = await _adminService.sendGroupChatMessage(text);
       final data = result['data'] as Map<String, dynamic>?;
       if (data != null && mounted) {
         setState(() {
-          _messages.add({
-            'id': data['id'],
-            'content': data['content'],
-            'sender_id': data['sender_id'],
-            'sender_name': _getMyName(),
-            'created_at': data['created_at'],
-          });
+          final idx = _messages.indexWhere((m) => m['id'] == tempId);
+          if (idx != -1) {
+            _messages[idx] = {
+              'id': data['id'],
+              'content': data['content'],
+              'sender_id': data['sender_id'],
+              'sender_name': _getMyName(),
+              'created_at': data['created_at'],
+            };
+          }
         });
-        _scrollToBottom();
       }
     } catch (e) {
       if (mounted) {
+        setState(() => _messages.removeWhere((m) => m['id'] == tempId));
         _controller.text = text;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

@@ -27,6 +27,11 @@ class AdminCommissionService {
     return _parseResponse(response);
   }
 
+  Future<Map<String, dynamic>> getPlatformDeductions() async {
+    final response = await _client.get('/admin/commission/platform-deductions');
+    return _parseResponse(response);
+  }
+
   Future<Map<String, dynamic>> listCommissionRules() async {
     final response = await _client.get('/admin/commission/rules');
     return _parseResponse(response);

@@ -128,9 +128,7 @@ class _AdminShellState extends State<AdminShell> {
       case 8:
         return const AdminAuditScreen();
       case 9:
-        return AdminCommissionScreen(
-          isSuperAdmin: _isSuperAdmin,
-        );
+        return const AdminCommissionScreen();
       case 10:
         return const AdminAnalyticsScreen();
       case 11:

@@ -17,6 +17,16 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Auto-run migrations on startup
+    try:
+        from alembic.config import Config
+        from alembic import command
+        alembic_cfg = Config("alembic.ini")
+        command.upgrade(alembic_cfg, "head")
+        logger.info("Database migrations applied successfully")
+    except Exception as e:
+        logger.error(f"Migration failed: {e}")
+
     logger.info(f"Starting {settings.PROJECT_NAME} v{settings.VERSION}")
     from app.services.sentry_service import init_sentry
     init_sentry()

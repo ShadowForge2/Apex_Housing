@@ -36,7 +36,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
   final _broadcastMessageController = TextEditingController();
   bool _broadcastSendEmail = false;
   List<String>? _broadcastRoles;
-  bool _isBroadcasting = false;
 
   bool get _isSuperAdmin => widget.isSuperAdmin;
 
@@ -327,24 +326,29 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       return;
     }
 
-    try {
-      await _adminService.updatePlatformSettings(
-        platformFeePercentage: fee,
-        minBookingAmount: minBooking,
-      );
-      // Re-read settings to sync derived values from server
-      final result = await _adminService.getPlatformSettings();
-      final data = result['data'] as Map<String, dynamic>?;
-      if (data != null && mounted) {
-        setState(() {
-          _feeController.text = '${data['platform_fee_percentage'] ?? fee}';
-          _minBookingController.text = '${data['min_booking_amount'] ?? minBooking}';
-        });
-      }
-      if (mounted) showAppToast(context, 'Platform settings saved');
-    } catch (e) {
-      if (mounted) showAppToast(context, 'Failed to save settings');
-    }
+    await runWithLoading(
+      context,
+      action: () async {
+        try {
+          await _adminService.updatePlatformSettings(
+            platformFeePercentage: fee,
+            minBookingAmount: minBooking,
+          );
+          final result = await _adminService.getPlatformSettings();
+          final data = result['data'] as Map<String, dynamic>?;
+          if (data != null && mounted) {
+            setState(() {
+              _feeController.text = '${data['platform_fee_percentage'] ?? fee}';
+              _minBookingController.text = '${data['min_booking_amount'] ?? minBooking}';
+            });
+          }
+          if (mounted) showAppToast(context, 'Platform settings saved');
+        } catch (e) {
+          if (mounted) showAppToast(context, 'Failed to save settings');
+        }
+      },
+      message: 'Saving settings...',
+    );
   }
 
   Widget _buildNotificationSettings() {
@@ -765,16 +769,14 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _isBroadcasting ? null : _sendBroadcast,
+                  onPressed: _sendBroadcast,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: AppColors.textWhite,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
                   ),
-                  child: _isBroadcasting
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Text('Send Announcement', style: TextStyle(fontWeight: FontWeight.w600)),
+                  child: const Text('Send Announcement', style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
@@ -817,24 +819,27 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       showAppToast(context, 'Please enter title and message');
       return;
     }
-    setState(() => _isBroadcasting = true);
-    try {
-      final result = await _adminService.broadcastAnnouncement(
-        title: title,
-        message: message,
-        roles: _broadcastRoles,
-        sendEmail: _broadcastSendEmail,
-        emailSubject: 'APEX Housing: $title',
-      );
-      _broadcastTitleController.clear();
-      _broadcastMessageController.clear();
-      setState(() { _broadcastSendEmail = false; _broadcastRoles = null; });
-      if (mounted) showAppToast(context, 'Announcement sent to ${result['data']?['recipients'] ?? 0} users');
-    } catch (e) {
-      if (mounted) showAppToast(context, 'Failed to send announcement');
-    } finally {
-      if (mounted) setState(() => _isBroadcasting = false);
-    }
+    await runWithLoading(
+      context,
+      action: () async {
+        try {
+          final result = await _adminService.broadcastAnnouncement(
+            title: title,
+            message: message,
+            roles: _broadcastRoles,
+            sendEmail: _broadcastSendEmail,
+            emailSubject: 'APEX Housing: $title',
+          );
+          _broadcastTitleController.clear();
+          _broadcastMessageController.clear();
+          setState(() { _broadcastSendEmail = false; _broadcastRoles = null; });
+          if (mounted) showAppToast(context, 'Announcement sent to ${result['data']?['recipients'] ?? 0} users');
+        } catch (e) {
+          if (mounted) showAppToast(context, 'Failed to send announcement');
+        }
+      },
+      message: 'Sending announcement...',
+    );
   }
 
   Widget _buildDangerZone() {

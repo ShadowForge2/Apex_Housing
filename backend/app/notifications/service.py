@@ -252,16 +252,22 @@ class NotificationService:
         users = result.all()
         sent = 0
         for user_id, user_email in users:
-            await self.create_notification(
-                user_id=user_id, title=title, message=message,
+            notification = Notification(
+                id=uuid4(), user_id=user_id,
+                title=title, body=message,
                 notification_type=NotificationType.IN_APP,
-                data={"announcement": True},
+                data_json={"announcement": True},
             )
-            if email_subject and email_html and user_email:
-                try:
-                    from app.services.email import email_service
-                    await email_service.send(to=user_email, subject=email_subject, html=email_html)
-                except Exception as e:
-                    logger.error(f"Broadcast email failed for {user_email}: {e}")
+            self.db.add(notification)
             sent += 1
+        await self.db.commit()
+
+        if email_subject and email_html:
+            for user_id, user_email in users:
+                if user_email:
+                    try:
+                        from app.services.email import email_service
+                        await email_service.send(to=user_email, subject=email_subject, html=email_html)
+                    except Exception as e:
+                        logger.error(f"Broadcast email failed for {user_email}: {e}")
         return sent

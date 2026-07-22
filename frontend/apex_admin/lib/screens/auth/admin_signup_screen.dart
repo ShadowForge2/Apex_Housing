@@ -58,11 +58,9 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
       context,
       action: () async {
         try {
-          final result = await AdminAuthService().register(
+          final result = await AdminAuthService().requestAccess(
             email: _emailController.text.trim(),
             password: _passwordController.text,
-            firstName: 'Admin',
-            lastName: '',
           );
           final data = result['data'] as Map<String, dynamic>;
           isResend = data['resend_otp'] == true;
@@ -78,14 +76,14 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Registration failed: ${e.toString()}'),
+                content: Text('Request access failed: ${e.toString()}'),
                 backgroundColor: AppColors.error,
               ),
             );
           }
         }
       },
-      message: 'Creating your account...',
+      message: 'Verifying your access...',
     );
     if (success && mounted) {
       if (redirectToLogin) {
@@ -100,8 +98,8 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(isResend
-                ? 'Account already exists but not verified. A new OTP has been sent!'
-                : 'Account created! Check the backend terminal for your OTP code.'),
+                ? 'A new OTP has been sent to your email!'
+                : 'Check your email for the OTP code.'),
             backgroundColor: AppColors.success,
           ),
         );

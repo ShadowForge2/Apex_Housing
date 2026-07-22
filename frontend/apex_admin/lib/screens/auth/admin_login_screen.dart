@@ -9,11 +9,13 @@ import '../../services/exceptions.dart';
 class AdminLoginScreen extends StatefulWidget {
   final VoidCallback onLogin;
   final VoidCallback onGoToSignup;
+  final VoidCallback onGoToForgotPassword;
 
   const AdminLoginScreen({
     super.key,
     required this.onLogin,
     required this.onGoToSignup,
+    required this.onGoToForgotPassword,
   });
 
   @override
@@ -311,7 +313,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
-                        onPressed: () {},
+                        onPressed: widget.onGoToForgotPassword,
                         child: Text(
                           'Forgot Password?',
                           style: TextStyle(
@@ -351,93 +353,38 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                       ),
                     ),
 
-                    // Divider
+                    // Biometric login
                     const SizedBox(height: 40),
 
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Divider(color: AppColors.border),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Text(
-                            'or continue with',
+                    if (_biometricEnabled)
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: OutlinedButton.icon(
+                          onPressed: _handleBiometricLogin,
+                          icon: const Icon(
+                            Icons.fingerprint_rounded,
+                            size: 22,
+                            color: AppColors.primary,
+                          ),
+                          label: const Text(
+                            'Sign in with Fingerprint',
                             style: TextStyle(
-                              fontSize: 13,
-                              color: AppColors.hint,
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: Divider(color: AppColors.border),
-                        ),
-                      ],
-                    ),
-
-                    // Social buttons
-                    const SizedBox(height: 28),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () {},
-                            icon: Icon(
-                              Icons.g_mobiledata,
-                              size: 22,
                               color: AppColors.text,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
                             ),
-                            label: Text(
-                              'Google',
-                              style: TextStyle(
-                                color: AppColors.text,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 16),
-                              side: BorderSide(color: AppColors.border),
-                              foregroundColor: AppColors.text,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(AppRadius.lg),
-                              ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            side: const BorderSide(color: AppColors.primary),
+                            foregroundColor: AppColors.primary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.lg),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        if (_biometricEnabled)
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: _handleBiometricLogin,
-                              icon: const Icon(
-                                Icons.fingerprint_rounded,
-                                size: 22,
-                                color: AppColors.primary,
-                              ),
-                              label: const Text(
-                                'Fingerprint',
-                                style: TextStyle(
-                                  color: AppColors.text,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
-                                side: const BorderSide(color: AppColors.primary),
-                                foregroundColor: AppColors.primary,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(AppRadius.lg),
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
+                      ),
 
                     // Sign up link
                     const SizedBox(height: 40),

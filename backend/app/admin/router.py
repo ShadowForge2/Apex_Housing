@@ -516,7 +516,6 @@ async def get_or_create_admin_group_chat(
     result = await db.execute(
         select(Conversation).where(
             Conversation.conversation_type == "admin_group",
-            Conversation.is_active == True,
         )
     )
     conv = result.scalar_one_or_none()
@@ -596,7 +595,6 @@ async def send_group_chat_message(
     result = await db.execute(
         select(Conversation).where(
             Conversation.conversation_type == "admin_group",
-            Conversation.is_active == True,
         )
     )
     conv = result.scalar_one_or_none()
@@ -677,7 +675,6 @@ async def get_group_chat_messages(
     result = await db.execute(
         select(Conversation).where(
             Conversation.conversation_type == "admin_group",
-            Conversation.is_active == True,
         )
     )
     conv = result.scalar_one_or_none()
@@ -751,7 +748,6 @@ async def add_group_chat_member(
     result = await db.execute(
         select(Conversation).where(
             Conversation.conversation_type == "admin_group",
-            Conversation.is_active == True,
         )
     )
     conv = result.scalar_one_or_none()
@@ -794,7 +790,6 @@ async def remove_group_chat_member(
     result = await db.execute(
         select(Conversation).where(
             Conversation.conversation_type == "admin_group",
-            Conversation.is_active == True,
         )
     )
     conv = result.scalar_one_or_none()

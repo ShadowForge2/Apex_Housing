@@ -68,7 +68,18 @@ class CommissionService:
         )
         result = await self.db.execute(query)
         logs = result.scalars().all()
-        return {"total": total, "logs": logs, "page": page, "page_size": page_size}
+        return {"total": total, "logs": [
+            {
+                "id": str(l.id),
+                "booking_ref": str(l.booking_id)[:8] if l.booking_id else "",
+                "role": l.commission_rule.role_type if l.commission_rule else "platform",
+                "amount": float(l.commission_amount),
+                "percentage": float(l.commission_rate),
+                "is_paid": l.status == "paid",
+                "date": str(l.created_at) if l.created_at else None,
+            }
+            for l in logs
+        ], "page": page, "page_size": page_size}
 
     async def get_agent_commissions(self, agent_id: UUID) -> list:
         result = await self.db.execute(

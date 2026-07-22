@@ -317,14 +317,35 @@ class AdminService:
         ], "page": page, "page_size": page_size}
 
     async def list_pending_kyc(self, page: int = 1, page_size: int = 20) -> dict:
+        from app.users.models import User, Profile
         query = select(VerificationDocument).where(VerificationDocument.status == "pending")
         count_result = await self.db.execute(select(func.count()).select_from(query.subquery()))
         total = count_result.scalar()
         query = query.order_by(VerificationDocument.id.desc()).offset((page - 1) * page_size).limit(page_size)
         result = await self.db.execute(query)
         documents = result.scalars().all()
-        return {"total": total, "documents": [
-            {"id": str(d.id), "user_id": str(d.user_id), "document_type": d.document_type, "status": d.status, "created_at": str(d.created_at) if d.created_at else None}
+
+        user_ids = list({d.user_id for d in documents})
+        users_map = {}
+        profiles_map = {}
+        if user_ids:
+            users_result = await self.db.execute(select(User).where(User.id.in_(user_ids)))
+            users_map = {u.id: u for u in users_result.scalars().all()}
+            profiles_result = await self.db.execute(select(Profile).where(Profile.user_id.in_(user_ids)))
+            profiles_map = {p.user_id: p for p in profiles_result.scalars().all()}
+
+        return {"total": total, "kyc_entries": [
+            {
+                "id": str(d.id),
+                "user_id": str(d.user_id),
+                "first_name": (profiles_map.get(d.user_id).first_name if profiles_map.get(d.user_id) else None) or "",
+                "last_name": (profiles_map.get(d.user_id).last_name if profiles_map.get(d.user_id) else None) or "",
+                "role": str(users_map.get(d.user_id).role) if users_map.get(d.user_id) else "Tenant",
+                "document_type": d.document_type,
+                "document_url": d.document_url,
+                "submitted_date": str(d.created_at) if d.created_at else "",
+                "status": d.status,
+            }
             for d in documents
         ], "page": page, "page_size": page_size}
 

@@ -61,7 +61,17 @@ async def get_agent_commissions(agent_id: UUID, user=Depends(get_admin), db: Asy
 async def list_commission_rules(user=Depends(get_admin), db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(CommissionRule).order_by(CommissionRule.created_at.desc()))
     rules = result.scalars().all()
-    return SuccessResponse(data={"total": len(rules), "rules": rules})
+    return SuccessResponse(data={"total": len(rules), "rules": [
+        {
+            "id": str(r.id), "name": r.name, "description": r.description,
+            "role": r.role_type, "rate": float(r.percentage),
+            "min_amount": float(r.min_amount) if r.min_amount else None,
+            "max_amount": float(r.max_amount) if r.max_amount else None,
+            "is_active": r.is_active,
+            "created_at": str(r.created_at),
+        }
+        for r in rules
+    ]})
 
 @router.post("/rules", response_model=SuccessResponse)
 async def create_commission_rule(body: CommissionRuleCreate, user=Depends(get_admin), db: AsyncSession = Depends(get_db)):
@@ -89,7 +99,10 @@ async def create_commission_rule(body: CommissionRuleCreate, user=Depends(get_ad
     db.add(rule)
     await db.commit()
     await db.refresh(rule)
-    return SuccessResponse(message="Commission rule created", data=rule)
+    return SuccessResponse(message="Commission rule created", data={
+        "id": str(rule.id), "name": rule.name, "description": rule.description,
+        "role": rule.role_type, "rate": float(rule.percentage), "is_active": rule.is_active,
+    })
 
 @router.put("/rules/{rule_id}", response_model=SuccessResponse)
 async def update_commission_rule(rule_id: UUID, body: CommissionRuleUpdate, user=Depends(get_admin), db: AsyncSession = Depends(get_db)):
@@ -116,7 +129,10 @@ async def update_commission_rule(rule_id: UUID, body: CommissionRuleUpdate, user
 
     await db.commit()
     await db.refresh(rule)
-    return SuccessResponse(message="Commission rule updated", data=rule)
+    return SuccessResponse(message="Commission rule updated", data={
+        "id": str(rule.id), "name": rule.name, "description": rule.description,
+        "role": rule.role_type, "rate": float(rule.percentage), "is_active": rule.is_active,
+    })
 
 @router.delete("/rules/{rule_id}", response_model=SuccessResponse)
 async def delete_commission_rule(rule_id: UUID, user=Depends(get_admin), db: AsyncSession = Depends(get_db)):

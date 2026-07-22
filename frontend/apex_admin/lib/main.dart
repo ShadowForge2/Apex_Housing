@@ -4,6 +4,7 @@ import 'screens/admin_shell.dart';
 import 'screens/auth/admin_splash_screen.dart';
 import 'screens/auth/admin_login_screen.dart';
 import 'screens/auth/admin_signup_screen.dart';
+import 'screens/auth/admin_forgot_password_screen.dart';
 import 'services/token_storage.dart';
 import 'services/admin_auth_service.dart';
 import 'services/security_service.dart';
@@ -36,7 +37,7 @@ class ApexAdminApp extends StatelessWidget {
   }
 }
 
-enum AuthScreen { splash, login, signup, shell }
+enum AuthScreen { splash, login, signup, forgotPassword, shell }
 
 class AdminAuthFlow extends StatefulWidget {
   const AdminAuthFlow({super.key});
@@ -96,6 +97,14 @@ class _AdminAuthFlowState extends State<AdminAuthFlow> {
     setState(() => _currentScreen = AuthScreen.login);
   }
 
+  void _goToForgotPassword() {
+    setState(() => _currentScreen = AuthScreen.forgotPassword);
+  }
+
+  void _onForgotPasswordComplete() {
+    setState(() => _currentScreen = AuthScreen.login);
+  }
+
   void _onLogout() async {
     await AdminAuthService().logout();
     if (mounted) {
@@ -112,11 +121,16 @@ class _AdminAuthFlowState extends State<AdminAuthFlow> {
         return AdminLoginScreen(
           onLogin: _onLogin,
           onGoToSignup: _goToSignup,
+          onGoToForgotPassword: _goToForgotPassword,
         );
       case AuthScreen.signup:
         return AdminSignupScreen(
           onSignup: _onSignup,
           onGoToLogin: _goToLogin,
+        );
+      case AuthScreen.forgotPassword:
+        return AdminForgotPasswordScreen(
+          onComplete: _onForgotPasswordComplete,
         );
       case AuthScreen.shell:
         return AdminShell(

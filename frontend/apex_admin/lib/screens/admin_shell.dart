@@ -40,6 +40,8 @@ class _AdminShellState extends State<AdminShell> {
   bool _isSuperAdmin = true;
   String _adminName = '';
   String _adminInitial = 'A';
+  String _adminEmail = '';
+  String _adminId = '';
   int _unreadCount = 0;
 
   @override
@@ -50,15 +52,20 @@ class _AdminShellState extends State<AdminShell> {
   }
 
   Future<void> _loadAdminInfo() async {
-    final role = await TokenStorage().getUserRole();
-    final name = await TokenStorage().getUserName();
-    final isSuperAdmin = await TokenStorage().getIsSuperAdmin();
+    final storage = TokenStorage();
+    final role = await storage.getUserRole();
+    final name = await storage.getUserName();
+    final email = await storage.getUserEmail();
+    final id = await storage.getUserId();
+    final isSuperAdmin = await storage.getIsSuperAdmin();
     if (mounted) {
       setState(() {
         _currentAdminRole = role ?? 'Super Admin';
         _isSuperAdmin = isSuperAdmin;
         _adminName = name ?? '';
         _adminInitial = _adminName.isNotEmpty ? _adminName[0].toUpperCase() : 'A';
+        _adminEmail = email ?? '';
+        _adminId = id ?? '';
       });
     }
   }
@@ -464,7 +471,7 @@ class _AdminShellState extends State<AdminShell> {
           ),
           const SizedBox(width: 12),
           GestureDetector(
-            onTap: () {},
+            onTap: _showProfileSheet,
             child: Container(
               padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
@@ -498,6 +505,21 @@ class _AdminShellState extends State<AdminShell> {
       ),
     );
   }
+
+  void _showProfileSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _AdminProfileSheet(
+        name: _adminName,
+        email: _adminEmail,
+        id: _adminId,
+        role: _currentAdminRole,
+        isSuperAdmin: _isSuperAdmin,
+        initial: _adminInitial,
+      ),
+    );
+  }
 }
 
 class _NavItem {
@@ -505,4 +527,153 @@ class _NavItem {
   final IconData icon;
 
   const _NavItem(this.label, this.icon);
+}
+
+class _AdminProfileSheet extends StatelessWidget {
+  final String name;
+  final String email;
+  final String id;
+  final String role;
+  final bool isSuperAdmin;
+  final String initial;
+
+  const _AdminProfileSheet({
+    required this.name,
+    required this.email,
+    required this.id,
+    required this.role,
+    required this.isSuperAdmin,
+    required this.initial,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 80),
+      decoration: const BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: DraggableScrollableSheet(
+        initialChildSize: 0.45,
+        minChildSize: 0.3,
+        maxChildSize: 0.6,
+        expand: false,
+        builder: (_, scrollController) {
+          return ListView(
+            controller: scrollController,
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Center(
+                child: CircleAvatar(
+                  radius: 36,
+                  backgroundColor: AppColors.primary,
+                  child: Text(
+                    initial,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: Text(
+                  name.isNotEmpty ? name : 'Admin',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: isSuperAdmin
+                        ? AppColors.primary.withValues(alpha: 0.1)
+                        : AppColors.success.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    isSuperAdmin ? 'Super Admin' : 'Admin',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: isSuperAdmin ? AppColors.primary : AppColors.success,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 28),
+              const Text(
+                'Account Details',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _profileRow(Icons.email_outlined, 'Email', email.isNotEmpty ? email : 'Not available'),
+              const SizedBox(height: 10),
+              _profileRow(Icons.badge_outlined, 'User ID', id.isNotEmpty ? id : 'Not available'),
+              const SizedBox(height: 10),
+              _profileRow(Icons.shield_outlined, 'Role', role.isNotEmpty ? role : 'Admin'),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _profileRow(IconData icon, String label, String value) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: AppColors.hint),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: const TextStyle(fontSize: 11, color: AppColors.hint)),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

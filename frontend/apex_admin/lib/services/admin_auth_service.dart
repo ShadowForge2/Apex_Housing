@@ -180,4 +180,59 @@ class AdminAuthService {
     });
     return _parseResponse(response);
   }
+
+  Future<Map<String, dynamic>> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    final response = await _client.post('/auth/password-reset/confirm', data: {
+      'token': code,
+      'new_password': newPassword,
+    });
+    return _parseResponse(response);
+  }
+
+  Future<Map<String, dynamic>> requestAccess({
+    required String email,
+    required String password,
+  }) async {
+    final response = await _client.post('/auth/admin/request-access', data: {
+      'email': email,
+      'password': password,
+    });
+
+    final result = _parseResponse(response);
+    final data = result['data'] as Map<String, dynamic>;
+
+    final accessToken = data['access_token'] as String?;
+    final refreshToken = data['refresh_token'] as String?;
+
+    if (accessToken != null && refreshToken != null) {
+      await _storage.saveTokens(
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+      );
+
+      final user = data['user'] as Map<String, dynamic>?;
+      if (user != null) {
+        await _storage.saveUser(
+          id: user['id'] as String? ?? '',
+          email: user['email'] as String? ?? email,
+          role: user['role'] as String? ?? 'ADMIN',
+          name: '${user['first_name'] ?? ''} ${user['last_name'] ?? ''}'.trim(),
+          isSuperAdmin: data['is_super_admin'] as bool? ?? false,
+        );
+      } else {
+        await _storage.saveUser(
+          id: data['user_id'] as String? ?? '',
+          email: email,
+          role: 'ADMIN',
+          isSuperAdmin: data['is_super_admin'] as bool? ?? false,
+        );
+      }
+    }
+
+    return result;
+  }
 }

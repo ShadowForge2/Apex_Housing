@@ -56,11 +56,9 @@ class ConversationResponse(BaseModel):
     id: UUID
     booking_id: Optional[UUID] = None
     conversation_type: str = "direct"
-    is_active: bool = True
     participants: List[ConversationParticipantResponse] = []
     last_message_at: Optional[datetime] = None
     last_message_preview: Optional[str] = None
-    created_at: datetime
 
 class ConversationListResponse(BaseModel):
     total: int

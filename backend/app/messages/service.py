@@ -50,8 +50,6 @@ class MessageService:
             select(Conversation).where(Conversation.id == data.conversation_id)
         )
         conv = conv_result.scalar_one()
-        if not conv.is_active:
-            raise Forbidden("This conversation is locked. The booking has been completed and this chat is now read-only.")
 
         is_direct = conv.conversation_type == "direct"
 
@@ -72,9 +70,6 @@ class MessageService:
             is_edited=False, is_deleted=False,
         )
         self.db.add(message)
-
-        conv.last_message_at = datetime.now(timezone.utc)
-        conv.last_message_preview = data.content[:100]
 
         unread_result = await self.db.execute(
             select(ConversationParticipant).where(
@@ -214,13 +209,6 @@ class MessageService:
         )
         self.db.add(complaint_message)
 
-        conv_result = await self.db.execute(
-            select(Conversation).where(Conversation.id == conversation.id)
-        )
-        conv = conv_result.scalar_one()
-        conv.last_message_at = datetime.now(timezone.utc)
-        conv.last_message_preview = f"[COMPLAINT] {data.reason}"
-
         unread_result = await self.db.execute(
             select(ConversationParticipant).where(
                 ConversationParticipant.conversation_id == conversation.id,
@@ -281,19 +269,25 @@ class MessageService:
 
     async def get_conversations(self, user_id: UUID, page: int = 1, page_size: int = 20) -> dict:
         from app.users.models import User as UserModel, Profile
+        from sqlalchemy import text
+
+        base_filter = (
+            select(Conversation.id)
+            .join(ConversationParticipant)
+            .where(ConversationParticipant.user_id == user_id)
+        )
+
+        count_result = await self.db.execute(
+            select(func.count()).select_from(base_filter.subquery())
+        )
+        total = count_result.scalar()
 
         query = (
             select(Conversation)
             .join(ConversationParticipant)
             .where(ConversationParticipant.user_id == user_id)
-            .order_by(Conversation.last_message_at.desc())
+            .order_by(Conversation.id.desc())
         )
-        count_result = await self.db.execute(
-            select(func.count()).select_from(
-                select(Conversation).join(ConversationParticipant).where(ConversationParticipant.user_id == user_id).subquery()
-            )
-        )
-        total = count_result.scalar()
         query = query.offset((page - 1) * page_size).limit(page_size)
         result = await self.db.execute(query)
         conversations = result.scalars().all()
@@ -337,12 +331,10 @@ class MessageService:
                 "id": str(conv.id),
                 "booking_id": str(conv.booking_id) if conv.booking_id else None,
                 "conversation_type": conv.conversation_type,
-                "is_active": conv.is_active,
                 "participants": other_users_info,
-                "last_message": conv.last_message_preview,
-                "last_message_at": conv.last_message_at.isoformat() if conv.last_message_at else None,
+                "last_message": None,
+                "last_message_at": None,
                 "unread_count": my_part.unread_count if my_part else 0,
-                "created_at": conv.created_at.isoformat() if conv.created_at else None,
             })
 
         return {"total": total, "conversations": enriched}

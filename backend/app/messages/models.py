@@ -19,12 +19,6 @@ class Conversation(BaseModelIdOnlyMixin, Base):
         nullable=True,
     )
     conversation_type: Mapped[str] = mapped_column(String(30), default="direct", nullable=False)
-    last_message_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    last_message_preview: Mapped[Optional[str]] = mapped_column(
-        String(255), nullable=True
-    )
 
     booking: Mapped[Optional["Booking"]] = relationship("Booking")
     participants: Mapped[list["ConversationParticipant"]] = relationship(

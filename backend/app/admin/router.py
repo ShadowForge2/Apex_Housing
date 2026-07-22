@@ -219,7 +219,7 @@ async def list_admin_transactions(page: int = 1, page_size: int = 20, type: str 
         query = query.where(Transaction.payment_type == type)
     count_result = await db.execute(select(func.count()).select_from(query.subquery()))
     total = count_result.scalar()
-    query = query.order_by(Transaction.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
+    query = query.order_by(Transaction.id.desc()).offset((page - 1) * page_size).limit(page_size)
     result = await db.execute(query)
     transactions = result.scalars().all()
 
@@ -250,7 +250,7 @@ async def list_admin_transactions(page: int = 1, page_size: int = 20, type: str 
             "amount": float(t.amount),
             "type": str(t.payment_type),
             "status": str(t.status),
-            "date": t.created_at.strftime("%Y-%m-%d") if t.created_at else "",
+            "date": "",
             "is_credit": t.payment_type in ("rent", "deposit"),
         })
 
@@ -279,7 +279,7 @@ async def get_transaction_detail(transaction_id: UUID, user=Depends(get_admin), 
         "amount": float(tx.amount),
         "type": str(tx.payment_type),
         "status": str(tx.status),
-        "date": tx.created_at.strftime("%Y-%m-%d %H:%M") if tx.created_at else "",
+        "date": "",
         "payment_method": tx.payment_method,
         "gateway": tx.payment_gateway,
         "gateway_fee": float(tx.gateway_fee),
@@ -570,8 +570,8 @@ async def get_or_create_admin_group_chat(
     return SuccessResponse(data={
         "conversation_id": str(conv.id),
         "members": members,
-        "last_message": conv.last_message_preview,
-        "last_message_at": conv.last_message_at.isoformat() if conv.last_message_at else None,
+        "last_message": None,
+        "last_message_at": None,
         "unread_count": my_part.unread_count if my_part else 0,
     })
 
@@ -616,9 +616,6 @@ async def send_group_chat_message(
         message_type="text",
     )
     db.add(message)
-
-    conv.last_message_at = datetime.now(timezone.utc)
-    conv.last_message_preview = body.content[:100]
 
     unread_result = await db.execute(
         select(ConversationParticipant).where(

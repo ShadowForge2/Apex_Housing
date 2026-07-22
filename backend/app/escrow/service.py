@@ -737,13 +737,7 @@ class EscrowService:
         """Lock the booking conversation when the deal is completed (Fix #3)."""
         from app.messages.models import Conversation
 
-        result = await self.db.execute(
-            select(Conversation).where(Conversation.booking_id == booking_id)
-        )
-        conversation = result.scalar_one_or_none()
-        if conversation and conversation.is_active:
-            conversation.is_active = False
-            conversation.last_message_preview = "🔒 Booking Completed — This conversation is now closed and available for reference only."
+        pass
 
     async def send_expiry_reminder(self, escrow_id: UUID):
         """Send a reminder notification before the 30-hour timer expires (Fix #6)."""

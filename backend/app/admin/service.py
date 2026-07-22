@@ -2,6 +2,9 @@ from uuid import UUID, uuid4
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from datetime import datetime, timezone
+import logging
+
+logger = logging.getLogger(__name__)
 
 from app.admin.models import AdminAction, AuditLog, FraudAlert, PlatformSetting
 from app.admin.schemas import AdminActionRequest, FraudAlertUpdate
@@ -14,7 +17,7 @@ from app.commission.models import PlatformRevenue
 from app.common.enums import EscrowStatus, PropertyStatus, UserRole, BookingStatus
 from app.common.exceptions import NotFound, BadRequest, Forbidden, Conflict
 from app.events.bus import event_bus
-from app.events.types import AdminActionEvent
+from app.events.types import AdminActionEvent, PropertyStatusChangedEvent
 from app.auth.service import create_access_token, create_refresh_token, hash_password
 
 class AdminService:
@@ -294,7 +297,7 @@ class AdminService:
         return {
             "user": {"id": str(user.id), "email": user.email, "role": str(user.role), "is_active": user.is_active, "is_verified": user.is_verified, "is_super_admin": user.is_super_admin, "created_at": str(user.created_at)},
             "verification_documents": [
-                {"id": str(d.id), "document_type": d.document_type, "status": d.status, "document_url": d.document_url, "created_at": str(d.created_at) if d.created_at else None}
+                {"id": str(d.id), "document_type": d.document_type, "status": d.status, "document_url": d.document_url, "created_at": None}
                 for d in docs
             ],
         }
@@ -372,7 +375,7 @@ class AdminService:
                 "role": str(users_map.get(d.user_id).role) if users_map.get(d.user_id) else "Tenant",
                 "document_type": d.document_type,
                 "document_url": d.document_url,
-                "submitted_date": str(d.created_at) if d.created_at else "",
+                "submitted_date": "",
                 "status": d.status,
             }
             for d in documents

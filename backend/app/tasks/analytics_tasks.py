@@ -93,12 +93,12 @@ def update_popular_searches():
     logger.info("Updating popular searches")
 
     async def _update():
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
         from sqlalchemy import select, func
         from app.database import async_session
         from app.analytics.models import SearchAnalytics
 
-        cutoff = datetime.utcnow() - timedelta(hours=24)
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
         async with async_session() as db:
             result = await db.execute(
                 select(SearchAnalytics.search_query, func.count().label("cnt"))

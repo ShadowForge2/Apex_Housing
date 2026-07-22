@@ -1,4 +1,5 @@
 export 'admin_models.dart';
+import 'admin_models.dart';
 
 const adminBookings = [
   AdminBooking(

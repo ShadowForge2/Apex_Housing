@@ -100,6 +100,7 @@ class FraudDetectionService:
             select(func.count()).select_from(WalletWithdrawal).where(
                 WalletWithdrawal.wallet_id.in_(wallet_ids),
                 WalletWithdrawal.status.in_(["pending", "processing", "completed"]),
+                WalletWithdrawal.created_at >= cutoff,
             )
         )
         count = count_result.scalar()
@@ -144,11 +145,12 @@ class FraudDetectionService:
     async def check_payment_failures(self, user_id: UUID) -> FraudAlert | None:
         from app.payments.models import Transaction
         from datetime import timezone as _tz
-        cutoff = datetime.now(_tz.utc) - timedelta(hours=1)
+        cutoff = datetime.now(_tz.utc) - timedelta(hours=24)
         result = await self.db.execute(
             select(func.count()).select_from(Transaction).where(
                 Transaction.user_id == user_id,
                 Transaction.status == "failed",
+                Transaction.created_at >= cutoff,
             )
         )
         count = result.scalar()
@@ -156,8 +158,8 @@ class FraudDetectionService:
             return await self._create_alert(
                 alert_type="payment_failure_spike",
                 severity="medium",
-                description=f"User had {count} failed payments total",
+                description=f"User had {count} failed payments within 24 hours",
                 user_id=user_id,
-                evidence={"failures_total": count},
+                evidence={"failures_24h": count, "window": "24h"},
             )
         return None

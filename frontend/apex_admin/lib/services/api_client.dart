@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'api_config.dart';
@@ -10,7 +11,7 @@ class SecurityInterceptor extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     final timestamp = DateTime.now().toUtc().toIso8601String();
-    final nonce = base64Encode(List<int>.generate(16, (_) => 0));
+    final nonce = base64Encode(List<int>.generate(16, (_) => Random.secure().nextInt(256)));
 
     options.headers['X-Request-Timestamp'] = timestamp;
     options.headers['X-Request-Nonce'] = nonce;
@@ -80,10 +81,12 @@ class ApiClient {
                 return;
               }
             } catch (e) {
-              // Refresh failed
+              debugPrint('[AUTH] Token refresh failed: $e');
             }
             _isRefreshing = false;
             await _tokenStorage.clearAll();
+            handler.next(error);
+            return;
           }
           handler.next(error);
         },

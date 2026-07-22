@@ -78,7 +78,7 @@ def process_agent_payouts():
     logger.info("Processing agent payouts")
 
     async def _process():
-        from datetime import datetime
+        from datetime import datetime, timezone
         from sqlalchemy import select
         from app.database import async_session
         from app.commission.models import CommissionLog
@@ -154,7 +154,7 @@ def process_agent_payouts():
                     if transfer_result.get("status"):
                         log.status = "paid"
                         log.gateway_reference = transfer_ref
-                        log.processed_at = datetime.utcnow()
+                        log.processed_at = datetime.now(timezone.utc)
                         log.notes = (log.notes or "") + f" | Paid via {transfer_ref} to {bank_account.bank_name}"
                         processed += 1
                         logger.info(f"Agent commission {log.id} paid: {log.recipient_share} NGN")

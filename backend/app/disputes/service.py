@@ -1,7 +1,7 @@
 from uuid import UUID, uuid4
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.disputes.models import Dispute, DisputeEvidence, DisputeMessage
 from app.disputes.schemas import DisputeCreate, DisputeUpdate, DisputeMessageCreate
@@ -60,7 +60,7 @@ class DisputeService:
             self.db.add(evidence)
 
         escrow.status = EscrowStatus.DISPUTED
-        escrow.dispute_opened_at = datetime.utcnow()
+        escrow.dispute_opened_at = datetime.now(timezone.utc)
         history = EscrowStatusHistory(
             id=uuid4(), escrow_id=escrow.id,
             status=EscrowStatus.DISPUTED,
@@ -96,7 +96,7 @@ class DisputeService:
         dispute.resolution = resolution
         dispute.resolution_notes = notes
         dispute.resolved_by = admin_id
-        dispute.resolved_at = datetime.utcnow()
+        dispute.resolved_at = datetime.now(timezone.utc)
 
         # Load the escrow to trigger the actual financial action
         escrow_result = await self.db.execute(
@@ -125,13 +125,13 @@ class DisputeService:
             from app.common.enums import EscrowEvent
             previous_status = escrow._pre_dispute_status if hasattr(escrow, '_pre_dispute_status') else EscrowStatus.TIMER_RUNNING
             # Default to TIMER_RUNNING if timer was active, or FUNDS_HELD otherwise
-            if escrow.hold_expires_at and escrow.hold_expires_at > datetime.utcnow():
+            if escrow.hold_expires_at and escrow.hold_expires_at > datetime.now(timezone.utc):
                 previous_status = EscrowStatus.TIMER_RUNNING
             else:
                 previous_status = EscrowStatus.FUNDS_HELD
             escrow.status = previous_status
             escrow.resolution = "dismissed"
-            escrow.resolution_at = datetime.utcnow()
+            escrow.resolution_at = datetime.now(timezone.utc)
             escrow.resolved_by = admin_id
             escrow.resolution_notes = notes or "Dispute dismissed — funds return to normal escrow flow"
 

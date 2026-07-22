@@ -3,9 +3,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.database import get_db
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, get_admin
 from app.properties.models import Amenity
 from app.common.response import SuccessResponse
+from app.users.models import User
 
 router = APIRouter(prefix="/amenities", tags=["Amenities"])
 
@@ -24,7 +25,7 @@ async def list_amenities(category: str = None, db: AsyncSession = Depends(get_db
     })
 
 @router.post("/", response_model=SuccessResponse)
-async def create_amenity(name: str, category: str = "basic", icon: str = None, db: AsyncSession = Depends(get_db)):
+async def create_amenity(name: str, category: str = "basic", icon: str = None, db: AsyncSession = Depends(get_db), admin: User = Depends(get_admin)):
     if category not in VALID_CATEGORIES:
         raise Exception(f"Invalid category. Must be one of: {', '.join(sorted(VALID_CATEGORIES))}")
     existing = await db.execute(select(Amenity).where(Amenity.name == name))

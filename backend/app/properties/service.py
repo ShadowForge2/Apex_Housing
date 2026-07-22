@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID, uuid4
 from slugify import slugify
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -55,7 +55,7 @@ class PropertyService:
         elif len(effective_signature) < 50:
             raise BadRequest("Invalid signature. Must be at least 50 characters.")
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         property_obj = Property(
             id=uuid4(),
             landlord_id=landlord_id,

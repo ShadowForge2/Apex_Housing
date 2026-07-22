@@ -127,7 +127,7 @@ class PaystackService:
     ) -> bool:
         import hashlib
         import hmac
-        expected = hmac.new(
+        expected = hmac.HMAC(
             secret.encode("utf-8"), payload, hashlib.sha512
         ).hexdigest()
         return hmac.compare_digest(expected, signature)

@@ -1,4 +1,5 @@
 from uuid import UUID, uuid4
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
 from sqlalchemy.orm import selectinload
@@ -72,7 +73,7 @@ class MessageService:
         )
         self.db.add(message)
 
-        conv.last_message_at = datetime.utcnow()
+        conv.last_message_at = datetime.now(timezone.utc)
         conv.last_message_preview = data.content[:100]
 
         unread_result = await self.db.execute(
@@ -218,8 +219,7 @@ class MessageService:
             select(Conversation).where(Conversation.id == conversation.id)
         )
         conv = conv_result.scalar_one()
-        from datetime import datetime
-        conv.last_message_at = datetime.utcnow()
+        conv.last_message_at = datetime.now(timezone.utc)
         conv.last_message_preview = f"[COMPLAINT] {data.reason}"
 
         unread_result = await self.db.execute(

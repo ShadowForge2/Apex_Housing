@@ -127,7 +127,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             current_count = results[1]
 
             if current_count >= max_requests:
-                retry_after = int(window - (now - (now - window)))
+                oldest_request = await r.zrange(key, 0, 0, withscores=True)
+                retry_after = window
+                if oldest_request:
+                    retry_after = max(1, int(oldest_request[0][1] + window - now + 0.999))
                 return JSONResponse(
                     status_code=429,
                     content={

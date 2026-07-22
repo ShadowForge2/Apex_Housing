@@ -11,7 +11,7 @@ router = APIRouter(tags=["sharing"])
 
 PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.example.apex_housing"
 APP_SCHEME = "apexhousing://property"
-DOMAIN = "apex-housing.online"
+DOMAIN = "apex-housing-api.onrender.com"
 
 LANDING_PAGE_HTML = """<!DOCTYPE html>
 <html lang="en">

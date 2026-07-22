@@ -12,7 +12,7 @@ def _run_async(coro):
 @celery_app.task(name="app.tasks.cleanup_tasks.cleanup_completed_bookings")
 def cleanup_completed_bookings():
     """
-    Delete completed booking data after 1 hour.
+    Archive and clean up completed booking data after 30 days.
     Runs every 5 minutes. Removes:
     - Property images (Supabase storage)
     - Property videos (Supabase storage)
@@ -21,10 +21,10 @@ def cleanup_completed_bookings():
     - Escrow records
     - Related messages/conversations
     """
-    logger.info("Cleaning up completed bookings older than 1 hour")
+    logger.info("Cleaning up completed bookings older than 30 days")
 
     async def _cleanup():
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
         from sqlalchemy import select, delete
         from app.database import async_session
         from app.bookings.models import Booking, BookingStatusHistory, ViewingSchedule
@@ -33,7 +33,7 @@ def cleanup_completed_bookings():
         from app.messages.models import Conversation, Message, MessageAttachment, MessageReadReceipt, ConversationParticipant
         from app.common.enums import BookingStatus, EscrowStatus
 
-        cutoff = datetime.utcnow() - timedelta(hours=1)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=30)
 
         async with async_session() as db:
             result = await db.execute(
@@ -207,7 +207,7 @@ def cleanup_expired_sessions():
     logger.info("Cleaning up expired user sessions")
 
     async def _cleanup():
-        from datetime import datetime
+        from datetime import datetime, timezone
         from sqlalchemy import delete
         from app.database import async_session
         from app.auth.models import UserSession
@@ -215,7 +215,7 @@ def cleanup_expired_sessions():
         async with async_session() as db:
             result = await db.execute(
                 delete(UserSession).where(
-                    (UserSession.expires_at < datetime.utcnow()) |
+                    (UserSession.expires_at < datetime.now(timezone.utc)) |
                     (UserSession.is_active == False)
                 )
             )

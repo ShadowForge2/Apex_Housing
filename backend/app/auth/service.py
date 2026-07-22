@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import uuid4, UUID
 import secrets
@@ -16,6 +16,10 @@ from app.common.enums import UserRole
 from app.common.exceptions import BadRequest, Unauthorized, NotFound, Conflict, Forbidden
 from app.services.email import email_service
 
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def hash_password(password: str) -> str:
@@ -25,7 +29,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 def create_access_token(user_id: UUID, role: str) -> str:
-    expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = _utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     payload = {
         "sub": str(user_id),
         "role": role,
@@ -35,7 +39,7 @@ def create_access_token(user_id: UUID, role: str) -> str:
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 def create_refresh_token(user_id: UUID) -> str:
-    expire = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    expire = _utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     payload = {
         "sub": str(user_id),
         "exp": expire,
@@ -127,7 +131,7 @@ class AuthService:
             user_id=user.id,
             refresh_token=refresh_token,
             is_active=True,
-            expires_at=datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+            expires_at=_utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
         )
         self.db.add(session)
         await self.db.commit()
@@ -167,7 +171,7 @@ class AuthService:
             user_agent=user_agent,
             ip_address=ip_address,
             is_active=True,
-            expires_at=datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+            expires_at=_utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
         )
         self.db.add(session)
 
@@ -220,7 +224,7 @@ class AuthService:
             user_id=user.id,
             refresh_token=new_refresh,
             is_active=True,
-            expires_at=datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+            expires_at=_utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
         )
         self.db.add(new_session)
         await self.db.commit()
@@ -254,7 +258,7 @@ class AuthService:
             code=hashlib.sha256(otp.encode()).hexdigest(),
             purpose="reset",
             is_used=False,
-            expires_at=datetime.utcnow() + timedelta(minutes=15),
+            expires_at=_utcnow() + timedelta(minutes=15),
         )
         self.db.add(otp_record)
         await self.db.commit()
@@ -267,7 +271,7 @@ class AuthService:
                 OTPCode.code == hashlib.sha256(token.encode()).hexdigest(),
                 OTPCode.purpose == "reset",
                 OTPCode.is_used == False,
-                OTPCode.expires_at > datetime.utcnow(),
+                OTPCode.expires_at > _utcnow(),
             )
         )
         otp_record = result.scalar_one_or_none()
@@ -288,7 +292,7 @@ class AuthService:
             OTPCode.code == code_hash,
             OTPCode.purpose == purpose,
             OTPCode.is_used == False,
-            OTPCode.expires_at > datetime.utcnow(),
+            OTPCode.expires_at > _utcnow(),
         )
 
         # Scope OTP to the specific user if email is provided

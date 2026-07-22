@@ -39,7 +39,7 @@ void main() {
             body: PropertyCard(
               property: property,
               onTap: () {},
-              onFavoriteToggle: () {},
+              onFavorite: () {},
             ),
           ),
         ),
@@ -55,7 +55,7 @@ void main() {
             body: PropertyCard(
               property: property,
               onTap: () {},
-              onFavoriteToggle: () {},
+              onFavorite: () {},
             ),
           ),
         ),
@@ -72,7 +72,7 @@ void main() {
             body: PropertyCard(
               property: property,
               onTap: () => tapped = true,
-              onFavoriteToggle: () {},
+              onFavorite: () {},
             ),
           ),
         ),
@@ -104,7 +104,7 @@ void main() {
             body: PropertyCard(
               property: property,
               onTap: () {},
-              onFavoriteToggle: () {},
+              onFavorite: () {},
             ),
           ),
         ),

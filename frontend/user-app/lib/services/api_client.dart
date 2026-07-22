@@ -1,21 +1,27 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'api_config.dart';
 import 'token_storage.dart';
 import 'exceptions.dart';
 
 class SecurityInterceptor extends Interceptor {
+  final _random = Random.secure();
+
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     final timestamp = DateTime.now().toUtc().toIso8601String();
-    final nonce = base64Encode(List<int>.generate(16, (_) => 0));
+    final nonce = base64Encode(List<int>.generate(16, (_) => _random.nextInt(256)));
 
     options.headers['X-Request-Timestamp'] = timestamp;
     options.headers['X-Request-Nonce'] = nonce;
-    options.headers['X-App-Platform'] = Platform.operatingSystem;
+    if (!kIsWeb) {
+      options.headers['X-App-Platform'] = Platform.operatingSystem;
+    }
     options.headers['X-App-Version'] = '1.0.0';
 
     if (kDebugMode) {
@@ -43,8 +49,13 @@ class ApiClient {
   late final Dio _dio;
   final TokenStorage _tokenStorage = TokenStorage();
   Completer<bool>? _refreshCompleter;
+  GlobalKey<NavigatorState>? _navigatorKey;
 
   Dio get dio => _dio;
+
+  void setNavigatorKey(GlobalKey<NavigatorState> key) {
+    _navigatorKey = key;
+  }
 
   ApiClient init() {
     _dio = Dio(
@@ -110,10 +121,18 @@ class ApiClient {
         }
       } else {
         await _tokenStorage.clearAll();
+        _navigateToLogin();
       }
     }
 
     handler.next(err);
+  }
+
+  void _navigateToLogin() {
+    final nav = _navigatorKey?.currentState;
+    if (nav != null) {
+      nav.pushNamedAndRemoveUntil('/login', (route) => false);
+    }
   }
 
   Future<bool> _attemptTokenRefresh() async {

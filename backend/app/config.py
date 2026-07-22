@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     SMTP_PORT: int = 587
     SMTP_USERNAME: str = ""
     SMTP_PASSWORD: str = ""
-    SMTP_FROM_EMAIL: str = "support@apex-housing.online"
+    SMTP_FROM_EMAIL: str = "support@apex-housing-api.onrender.com"
     SMTP_FROM_NAME: str = "APEX Housing"
 
     # --- SendGrid (Optional Email Provider) ---
@@ -55,7 +55,10 @@ class Settings(BaseSettings):
     SENDGRID_FROM_EMAIL: str = ""
 
     # --- Resend (Email API) ---
+    # Comma-separated list of Resend API keys for rotation/failover
+    # e.g. RESEND_API_KEYS=re_key1,re_key2,re_key3
     RESEND_API_KEY: str = ""
+    RESEND_API_KEYS: str = ""
 
     # --- Google Maps (Geocoding + Places) ---
     GOOGLE_MAPS_API_KEY: str = ""
@@ -67,12 +70,12 @@ class Settings(BaseSettings):
     # --- Google OAuth ---
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
-    GOOGLE_REDIRECT_URI: str = ""  # Set in .env: https://apex-housing.online/api/v1/auth/google/callback
+    GOOGLE_REDIRECT_URI: str = ""  # Set in .env: https://apex-housing-api.onrender.com/api/v1/auth/google/callback
 
     # --- App Settings ---
-    FRONTEND_URL: str = "https://apex-housing.online"
+    FRONTEND_URL: str = "https://apex-housing-api.onrender.com"
     CORS_ORIGINS: List[str] = [
-        "https://apex-housing.online",
+        "https://apex-housing-api.onrender.com",
         "http://localhost:5173",
         "http://localhost:5174",
         "http://localhost:3000",
@@ -97,6 +100,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = "ignore"
 
 
 settings = Settings()

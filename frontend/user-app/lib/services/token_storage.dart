@@ -92,7 +92,8 @@ class TokenStorage {
 
   Future<bool> isLoggedIn() async {
     final token = await getAccessToken();
-    return token != null && token.isNotEmpty;
+    if (token == null || token.isEmpty) return false;
+    return !(await isTokenExpired());
   }
 
   Future<void> clearAll() async {

@@ -1,5 +1,5 @@
 class ApiConfig {
-  // Use --dart-define=BASE_URL=https://apex-housing.online at build time.
+  // Use --dart-define=BASE_URL=https://apex-housing-api.onrender.com at build time.
   // In debug mode, falls back to localhost for local development.
   static const String _envBaseUrl = String.fromEnvironment(
     'BASE_URL',
@@ -12,6 +12,11 @@ class ApiConfig {
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
         throw Exception(
           'Invalid BASE_URL: "$url". Must start with http:// or https://',
+        );
+      }
+      if (kReleaseMode && url.startsWith('http://')) {
+        throw Exception(
+          'Insecure BASE_URL "$url" is not allowed in release builds. Use https://',
         );
       }
       return url;
@@ -28,6 +33,10 @@ class ApiConfig {
   }
 
   static const String apiPrefix = '/api/v1';
+
+  static const String googleServerClientId = String.fromEnvironment(
+    'GOOGLE_SERVER_CLIENT_ID',
+  );
   static const Duration timeout = Duration(seconds: 30);
 
   static String get apiUrl => '$baseUrl$apiPrefix';

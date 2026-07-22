@@ -1,7 +1,7 @@
 from uuid import UUID, uuid4
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import secrets
 import logging
 
@@ -354,7 +354,7 @@ class PaymentService:
     async def request_withdrawal(self, user_id: UUID, data: WithdrawalRequest) -> dict:
         from app.payments.models import WalletWithdrawal
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         # Determine processing mode BEFORE locking
         is_immediate = can_withdraw_now(now)
@@ -459,7 +459,7 @@ class PaymentService:
         """
         from app.payments.models import WalletWithdrawal
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         result = await self.db.execute(
             select(WalletWithdrawal).where(
                 WalletWithdrawal.status == "scheduled",
@@ -516,7 +516,7 @@ class PaymentService:
         """
         from app.payments.models import WalletWithdrawal
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         result = await self.db.execute(
             select(WalletWithdrawal).where(
                 WalletWithdrawal.status.in_(["pending", "scheduled"]),
@@ -600,7 +600,7 @@ class PaymentService:
         if transfer_result.get("status"):
             withdrawal.status = "processing"
             withdrawal.gateway_reference = transfer_ref
-            withdrawal.processed_at = datetime.utcnow()
+            withdrawal.processed_at = datetime.now(timezone.utc)
         else:
             withdrawal.status = "failed"
             # Atomic refund: lock wallet, move from pending back to balance
@@ -652,7 +652,7 @@ class PaymentService:
                 withdrawal = result.scalar_one_or_none()
                 if withdrawal and withdrawal.status != "completed":
                     withdrawal.status = "completed"
-                    withdrawal.processed_at = datetime.utcnow()
+                    withdrawal.processed_at = datetime.now(timezone.utc)
 
                     # Atomic: move from pending_balance to completed
                     await self.db.execute(

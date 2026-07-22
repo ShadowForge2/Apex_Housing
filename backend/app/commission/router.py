@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 from decimal import Decimal
 from pydantic import BaseModel
@@ -40,7 +40,7 @@ class CommissionRuleUpdate(BaseModel):
 @router.get("/revenue", response_model=SuccessResponse)
 async def get_revenue_summary(days: int = 30, user=Depends(get_admin), db: AsyncSession = Depends(get_db)):
     service = CommissionService(db)
-    end = datetime.utcnow()
+    end = datetime.now(timezone.utc)
     start = end - timedelta(days=days)
     summary = await service.get_revenue_summary(start, end)
     return SuccessResponse(data=summary)

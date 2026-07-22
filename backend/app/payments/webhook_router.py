@@ -9,7 +9,7 @@ Handles:
 - transfer.success / transfer.failed / transfer.reversed → payout tracking
 """
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
@@ -104,7 +104,7 @@ async def _handle_withdrawal_event(db, event_type: str, withdrawal):
         if withdrawal.status in ("completed", "cancelled", "failed", "expired"):
             return
         withdrawal.status = "completed"
-        withdrawal.processed_at = datetime.utcnow()
+        withdrawal.processed_at = datetime.now(timezone.utc)
 
         wallet_result = await db.execute(
             select(Wallet).where(Wallet.id == withdrawal.wallet_id).with_for_update()
@@ -135,7 +135,7 @@ async def _handle_commission_transfer_event(db, event_type: str, commission_log)
         if commission_log.status in ("paid", "failed", "skipped"):
             return
         commission_log.status = "paid"
-        commission_log.processed_at = datetime.utcnow()
+        commission_log.processed_at = datetime.now(timezone.utc)
         commission_log.notes = (commission_log.notes or "") + " | Transfer confirmed by webhook"
         logger.info("Commission %s paid (webhook confirmed)", commission_log.id)
 

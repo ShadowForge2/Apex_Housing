@@ -32,6 +32,7 @@ final LocaleService _localeService = LocaleService();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   ApiClient.instance.init();
+  ApiClient.instance.setNavigatorKey(_navKey);
 
   // Run security checks (non-blocking, logs warnings)
   SecurityService.instance.runChecks().then((_) {
@@ -211,7 +212,7 @@ class _ApexHousingAppState extends State<ApexHousingApp> {
                         case '/map':
                           return MaterialPageRoute(
                             builder: (_) => MapExploreScreen(
-                              onPropertyDetail: (index) => nav.pushNamed('/property-detail', arguments: index),
+                              onPropertyDetail: (propertyId) => nav.pushNamed('/property-detail', arguments: propertyId),
                             ),
                           );
                         case '/add-property':

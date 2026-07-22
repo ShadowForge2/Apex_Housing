@@ -6,7 +6,7 @@ Paystack processes transfers only on:
 - Nigerian public holidays are NOT business days
 - Transfers initiated after 2PM WAT on a business day may queue to the next business day
 """
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from typing import Optional
 
 
@@ -65,21 +65,21 @@ PAYOUT_CUTOFF_HOUR = 14  # 2:00 PM WAT (West Africa Time, UTC+1)
 def is_weekend(dt: Optional[datetime] = None) -> bool:
     """Check if a date falls on Saturday or Sunday."""
     if dt is None:
-        dt = datetime.utcnow()
+        dt = datetime.now(timezone.utc)
     return dt.weekday() >= 5  # 5=Saturday, 6=Sunday
 
 
 def is_public_holiday(dt: Optional[date] = None) -> bool:
     """Check if a date is a Nigerian public holiday."""
     if dt is None:
-        dt = datetime.utcnow().date()
+        dt = datetime.now(timezone.utc).date()
     return dt in ALL_HOLIDAYS
 
 
 def is_business_day(dt: Optional[datetime] = None) -> bool:
     """Check if a datetime falls on a business day (weekday, not holiday)."""
     if dt is None:
-        dt = datetime.utcnow()
+        dt = datetime.now(timezone.utc)
     check_date = dt.date() if isinstance(dt, datetime) else dt
     return not is_weekend(dt) and not is_public_holiday(check_date)
 
@@ -91,14 +91,14 @@ def is_within_payout_cutoff(dt: Optional[datetime] = None) -> bool:
     After 2PM WAT, they queue to the next business day.
     """
     if dt is None:
-        dt = datetime.utcnow()
+        dt = datetime.now(timezone.utc)
     return dt.hour < PAYOUT_CUTOFF_HOUR
 
 
 def get_next_business_day(dt: Optional[date] = None) -> date:
     """Get the next business day from the given date (inclusive if already a business day)."""
     if dt is None:
-        dt = datetime.utcnow().date()
+        dt = datetime.now(timezone.utc).date()
     if isinstance(dt, datetime):
         dt = dt.date()
 
@@ -118,7 +118,7 @@ def get_next_business_datetime(dt: Optional[datetime] = None) -> datetime:
     - If weekend/holiday: returns 9AM on the next business day
     """
     if dt is None:
-        dt = datetime.utcnow()
+        dt = datetime.now(timezone.utc)
 
     if is_business_day(dt) and is_within_payout_cutoff(dt):
         return dt
@@ -134,7 +134,7 @@ def get_next_business_datetime(dt: Optional[datetime] = None) -> datetime:
 def can_withdraw_now(dt: Optional[datetime] = None) -> bool:
     """Quick check: can a withdrawal be processed right now?"""
     if dt is None:
-        dt = datetime.utcnow()
+        dt = datetime.now(timezone.utc)
     return is_business_day(dt) and is_within_payout_cutoff(dt)
 
 

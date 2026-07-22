@@ -343,7 +343,7 @@ async def get_verification_status(user: User = Depends(get_current_user), db: As
     from sqlalchemy import select as sa_select
     from app.users.models import VerificationDocument
     from app.payments.models import BankAccount
-    from datetime import datetime
+    from datetime import datetime, timezone
 
     kyc_verified = user.is_verified
     kyc_status = "approved" if kyc_verified else "not_started"
@@ -505,7 +505,7 @@ async def save_my_signature(
     db: AsyncSession = Depends(get_db),
 ):
     from app.users.models import UserSignature
-    from datetime import datetime
+    from datetime import datetime, timezone
     import uuid as _uuid
     import base64 as _base64
 
@@ -527,7 +527,7 @@ async def save_my_signature(
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid base64 signature data.")
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     old_active = await db.execute(
         select(UserSignature).where(
@@ -611,7 +611,7 @@ async def upload_my_signature(
     db: AsyncSession = Depends(get_db),
 ):
     from app.users.models import UserSignature
-    from datetime import datetime
+    from datetime import datetime, timezone
     import uuid as _uuid
     import base64 as _base64
 
@@ -657,7 +657,7 @@ async def upload_my_signature(
     if len(b64_data) < 50:
         raise HTTPException(status_code=400, detail="Invalid signature data.")
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     old_active = await db.execute(
         select(UserSignature).where(

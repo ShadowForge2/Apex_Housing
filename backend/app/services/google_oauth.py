@@ -24,6 +24,7 @@ class GoogleOAuthService:
         self.redirect_uri = settings.GOOGLE_REDIRECT_URI
 
     def get_authorization_url(self, state: str = None) -> str:
+        from urllib.parse import urlencode
         params = {
             "client_id": self.client_id,
             "redirect_uri": self.redirect_uri,
@@ -35,8 +36,7 @@ class GoogleOAuthService:
         if state:
             params["state"] = state
 
-        query = "&".join(f"{k}={v}" for k, v in params.items())
-        return f"{GOOGLE_AUTH_URL}?{query}"
+        return f"{GOOGLE_AUTH_URL}?{urlencode(params)}"
 
     async def exchange_code(self, code: str) -> dict:
         async with httpx.AsyncClient() as client:

@@ -16,7 +16,7 @@ def expire_pending_bookings():
     logger.info("Expiring stale bookings")
 
     async def _expire():
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
         from sqlalchemy import select
         from app.database import async_session
         from app.bookings.models import Booking, BookingStatusHistory
@@ -24,7 +24,7 @@ def expire_pending_bookings():
         from app.users.models import User
         from app.notifications.service import NotificationService
 
-        cutoff = datetime.utcnow() - timedelta(hours=48)
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=48)
         async with async_session() as db:
             result = await db.execute(
                 select(Booking).where(

@@ -86,12 +86,64 @@ class SMTPEmailProvider(EmailProvider):
 
 
 class ResendEmailProvider(EmailProvider):
+    """Resend provider with automatic multi-key rotation.
+    
+    Supports comma-separated RESEND_API_KEYS for failover.
+    When a key hits rate limit (429), automatically switches to the next key.
+    Failed keys are cooled down for 60 seconds before retrying.
+    """
+    RATE_LIMIT_STATUS = 429
+    COOLDOWN_SECONDS = 60
+
     def __init__(self):
-        self.api_key = settings.RESEND_API_KEY
-        self.from_email = settings.SMTP_FROM_EMAIL or "support@apex-housing.online"
         self.from_name = settings.SMTP_FROM_NAME or "APEX Housing"
+        self.from_email = settings.SMTP_FROM_EMAIL or "support@apex-housing-api.onrender.com"
+
+        # Build key list from RESEND_API_KEYS (comma-separated) or fall back to single RESEND_API_KEY
+        raw = settings.RESEND_API_KEYS or settings.RESEND_API_KEY
+        self._keys = [k.strip() for k in raw.split(",") if k.strip()]
+        self._current_index = 0
+        self._cooldowns: dict[str, float] = {}  # key -> unix timestamp when available again
+        logger.info(f"Resend provider initialized with {len(self._keys)} API key(s)")
+
+    def _get_available_key(self) -> Optional[str]:
+        """Return the next available key, or None if all are on cooldown."""
+        import time
+        now = time.time()
+        for _ in range(len(self._keys)):
+            key = self._keys[self._current_index]
+            cooldown_until = self._cooldowns.get(key, 0)
+            if now >= cooldown_until:
+                return key
+            self._current_index = (self._current_index + 1) % len(self._keys)
+        return None
+
+    def _rotate_key(self, failed_key: str):
+        """Mark key as on cooldown and move to next."""
+        import time
+        self._cooldowns[failed_key] = time.time() + self.COOLDOWN_SECONDS
+        self._current_index = (self._current_index + 1) % len(self._keys)
+        remaining = sum(1 for k, t in self._cooldowns.items() if time.time() < t)
+        logger.warning(f"Resend key rotated. {remaining} key(s) on cooldown.")
 
     async def send(self, to: str, subject: str, html: str, text: str = None) -> bool:
+        for attempt in range(len(self._keys)):
+            api_key = self._get_available_key()
+            if not api_key:
+                logger.error("All Resend API keys are on cooldown. Email not sent.")
+                return False
+
+            success = await self._send_with_key(api_key, to, subject, html, text)
+            if success:
+                return True
+
+            # Failed — rotate to next key and retry
+            self._rotate_key(api_key)
+
+        logger.error(f"Resend: all {len(self._keys)} keys failed for '{subject}' to {to}")
+        return False
+
+    async def _send_with_key(self, api_key: str, to: str, subject: str, html: str, text: str = None) -> bool:
         payload = {
             "from": f"{self.from_name} <{self.from_email}>",
             "to": [to],
@@ -102,7 +154,7 @@ class ResendEmailProvider(EmailProvider):
             payload["text"] = text
 
         headers = {
-            "Authorization": f"Bearer {self.api_key}",
+            "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         }
 
@@ -117,7 +169,12 @@ class ResendEmailProvider(EmailProvider):
                 data = response.json()
                 logger.info(f"Resend email sent to {to}: {subject} (id={data.get('id', '?')})")
                 return True
-            logger.error(f"Resend error: {response.status_code} {response.text}")
+
+            if response.status_code == self.RATE_LIMIT_STATUS:
+                logger.warning(f"Resend rate limit hit on key ...{api_key[-6:]}. Rotating.")
+                return False
+
+            logger.error(f"Resend error (key ...{api_key[-6:]}): {response.status_code} {response.text}")
             return False
 
 
@@ -168,15 +225,23 @@ class EmailService:
             and settings.SMTP_PASSWORD not in {"your-app-password", "your_app_password", ""}
         )
 
-        if settings.RESEND_API_KEY:
+        has_resend = bool(settings.RESEND_API_KEY or settings.RESEND_API_KEYS)
+
+        if has_resend:
             self.provider = ResendEmailProvider()
-            logger.info("Email provider: Resend")
+            key_count = len([k for k in (settings.RESEND_API_KEYS or settings.RESEND_API_KEY).split(",") if k.strip()])
+            logger.info(f"Email provider: Resend ({key_count} key(s) configured)")
         elif settings.EMAIL_PROVIDER == "sendgrid" and settings.SENDGRID_API_KEY:
             self.provider = SendGridEmailProvider()
             logger.info("Email provider: SendGrid")
-        elif settings.ENVIRONMENT == "development" or not smtp_valid:
+        elif settings.ENVIRONMENT == "development":
             self.provider = ConsoleEmailProvider()
             logger.info("Email provider: CONSOLE (emails printed to log)")
+        elif not smtp_valid:
+            raise RuntimeError(
+                "Production email delivery requires RESEND_API_KEYS (comma-separated), "
+                "RESEND_API_KEY, SendGrid credentials, or valid SMTP_USERNAME and SMTP_PASSWORD."
+            )
         else:
             self.provider = SMTPEmailProvider()
             logger.info(f"Email provider: SMTP ({settings.SMTP_USERNAME})")

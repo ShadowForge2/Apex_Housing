@@ -11,7 +11,7 @@ from app.config import settings
 
 # Disable prepared statement caching — required for pgbouncer (transaction mode)
 # used by Supabase pooler, Render, and most managed Postgres providers.
-connect_args = {"statement_cache_size": 0}
+connect_args = {"statement_cache_size": 0, "prepared_statement_cache_size": 0}
 
 engine = create_async_engine(
     settings.DATABASE_URL,
@@ -32,7 +32,8 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with async_session() as session:
         try:
             yield session
-            await session.commit()
+            if session.is_active:
+                await session.commit()
         except Exception:
             await session.rollback()
             raise

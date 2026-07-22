@@ -5,7 +5,7 @@ and status tracking with recipient code caching.
 """
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional
 
@@ -261,7 +261,7 @@ class PayoutService:
         # 5. Update withdrawal record
         withdrawal.status = "processing"
         withdrawal.gateway_reference = transfer_ref
-        withdrawal.processed_at = datetime.utcnow()
+        withdrawal.processed_at = datetime.now(timezone.utc)
 
         await self.db.commit()
 

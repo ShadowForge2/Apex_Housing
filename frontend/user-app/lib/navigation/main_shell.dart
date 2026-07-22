@@ -35,8 +35,8 @@ class _MainShellState extends State<MainShell> {
     _lastRole = role;
   }
 
-  void _openPropertyDetail(int index) {
-    Navigator.pushNamed(context, '/property-detail', arguments: index);
+  void _openPropertyDetail(String propertyId) {
+    Navigator.pushNamed(context, '/property-detail', arguments: propertyId);
   }
 
   void _openMap() {
@@ -99,14 +99,14 @@ class _MainShellState extends State<MainShell> {
   List<Widget> _tenantScreens() {
     return [
       HomeScreen(
-        onPropertyTap: () => Navigator.pushNamed(context, '/property-detail'),
+        onPropertyTap: () {},
         onPropertyDetail: _openPropertyDetail,
         onMapTap: _openMap,
       ),
       const BookingsScreen(),
       const MessagesScreen(),
       FavoritesScreen(
-        onPropertyTap: () => Navigator.pushNamed(context, '/property-detail'),
+        onPropertyTap: () {},
         onPropertyDetail: _openPropertyDetail,
       ),
       const ProfileScreen(),

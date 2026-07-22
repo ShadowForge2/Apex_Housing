@@ -184,9 +184,15 @@ class AuthService {
   }
 
   Future<Map<String, dynamic>> signInWithGoogle() async {
+    if (ApiConfig.googleServerClientId.isEmpty) {
+      throw ApiException(
+        message: 'Google Sign-In is not configured for this app build.',
+      );
+    }
+
     final googleSignIn = GoogleSignIn(
       scopes: ['email', 'profile'],
-      serverClientId: '731881455826-i0hcol5ribhciar8bo0k8fpmmuf6oiv0.apps.googleusercontent.com',
+      serverClientId: ApiConfig.googleServerClientId,
     );
 
     await googleSignIn.signOut();

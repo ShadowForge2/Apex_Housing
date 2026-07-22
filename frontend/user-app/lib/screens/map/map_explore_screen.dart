@@ -10,7 +10,7 @@ import '../../services/location_service.dart';
 import '../../widgets/loading_overlay.dart';
 
 class MapExploreScreen extends StatefulWidget {
-  final void Function(int)? onPropertyDetail;
+  final void Function(String propertyId)? onPropertyDetail;
 
   const MapExploreScreen({super.key, this.onPropertyDetail});
 
@@ -364,9 +364,9 @@ class _MapExploreScreenState extends State<MapExploreScreen> {
   Widget _bottomPropertyCard(Property property, ThemeColors tc) {
     return GestureDetector(
       onTap: () {
-        if (widget.onPropertyDetail != null) {
+        if (widget.onPropertyDetail != null && _selectedPropertyIndex >= 0 && _selectedPropertyIndex < _properties.length) {
           showApexLoadingThen(context, () {
-            widget.onPropertyDetail!(_selectedPropertyIndex);
+            widget.onPropertyDetail!(_properties[_selectedPropertyIndex].id);
           });
         }
       },

@@ -1,5 +1,5 @@
 class ApiConfig {
-  // Use --dart-define=BASE_URL=https://apex-housing.online at build time.
+  // Use --dart-define=BASE_URL=https://apex-housing-api.onrender.com at build time.
   // In debug mode, falls back to localhost for local development.
   static const String _envBaseUrl = String.fromEnvironment(
     'BASE_URL',
@@ -12,6 +12,15 @@ class ApiConfig {
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
         throw Exception(
           'Invalid BASE_URL: "$url". Must start with http:// or https://',
+        );
+      }
+      // Reject insecure URLs in release builds
+      if (!const bool.fromEnvironment('dart.vm.product') && url.startsWith('http://')) {
+        // Debug mode: allow http for local dev
+      } else if (url.startsWith('http://')) {
+        throw Exception(
+          'Insecure BASE_URL "$url" is not allowed in release builds. '
+          'Use https:// instead.',
         );
       }
       return url;

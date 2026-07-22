@@ -20,7 +20,7 @@ import '../profile/onboarding_flow_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback onPropertyTap;
-  final void Function(int)? onPropertyDetail;
+  final void Function(String propertyId)? onPropertyDetail;
   final VoidCallback? onMapTap;
 
   const HomeScreen({super.key, required this.onPropertyTap, this.onPropertyDetail, this.onMapTap});
@@ -492,7 +492,7 @@ class _HomeScreenState extends State<HomeScreen> {
             onTap: () {
               showApexLoadingThen(context, () {
                 if (widget.onPropertyDetail != null) {
-                  widget.onPropertyDetail!(i);
+                  widget.onPropertyDetail!(prop.id);
                 } else {
                   widget.onPropertyTap();
                 }

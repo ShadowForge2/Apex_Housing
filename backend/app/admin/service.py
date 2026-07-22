@@ -1,7 +1,7 @@
 from uuid import UUID, uuid4
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.admin.models import AdminAction, AuditLog, FraudAlert, PlatformSetting
 from app.admin.schemas import AdminActionRequest, FraudAlertUpdate
@@ -364,7 +364,7 @@ class AdminService:
         if data.assigned_to:
             alert.assigned_to = data.assigned_to
         if data.status == "resolved":
-            alert.resolved_at = datetime.utcnow()
+            alert.resolved_at = datetime.now(timezone.utc)
         await self.db.commit()
         return {
             "id": str(alert.id),

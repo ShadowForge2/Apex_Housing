@@ -23,7 +23,7 @@ def process_scheduled_withdrawals():
         from app.payments.service import PaymentService
         from app.common.business_days import is_business_day
 
-        now = __import__("datetime").datetime.utcnow()
+        now = __import__("datetime").datetime.now(__import__("datetime").timezone.utc)
         if not is_business_day(now):
             logger.info("Not a business day, skipping withdrawal processing")
             return

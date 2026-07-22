@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from calendar import month_abbr
 from uuid import UUID
@@ -23,7 +23,7 @@ class LandlordAnalyticsService:
         return result.scalar_one_or_none()
 
     async def get_summary(self, landlord: Landlord) -> dict:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         current_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         prev_month_start = (current_month_start - timedelta(days=1)).replace(day=1)
 
@@ -92,7 +92,7 @@ class LandlordAnalyticsService:
         }
 
     async def get_revenue_chart(self, landlord: Landlord) -> dict:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         months = []
         for i in range(11, -1, -1):
             d = now - timedelta(days=i * 30)

@@ -5,7 +5,7 @@ Verifies signatures and dispatches transfer lifecycle events.
 import hashlib
 import hmac
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,7 +35,7 @@ class WebhookService:
             logger.critical("PAYSTACK_WEBHOOK_SECRET not set — rejecting webhook")
             return False
         try:
-            expected = hmac.new(
+            expected = hmac.HMAC(
                 secret.encode("utf-8"), payload, hashlib.sha512
             ).hexdigest()
             return hmac.compare_digest(expected, signature)
@@ -119,7 +119,7 @@ async def _handle_transfer_success(
         return
 
     withdrawal.status = "completed"
-    withdrawal.processed_at = datetime.utcnow()
+    withdrawal.processed_at = datetime.now(timezone.utc)
 
     await db.execute(
         update(Wallet)

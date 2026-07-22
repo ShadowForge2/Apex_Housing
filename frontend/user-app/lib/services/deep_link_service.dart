@@ -43,8 +43,8 @@ class DeepLinkService {
   }
 
   String? _parsePropertySlug(Uri uri) {
-    // https://apex-housing.online/p/{slug}
-    if (uri.host == 'apex-housing.online' &&
+    // https://apex-housing-api.onrender.com/p/{slug} or https://apex-housing.online/p/{slug}
+    if ((uri.host == 'apex-housing-api.onrender.com' || uri.host == 'apex-housing.online') &&
         uri.pathSegments.length >= 2 &&
         uri.pathSegments[0] == 'p') {
       return uri.pathSegments[1];
@@ -61,7 +61,7 @@ class DeepLinkService {
   }
 
   static String buildShareUrl(String slug) {
-    return 'https://apex-housing.online/p/$slug';
+    return 'https://apex-housing-api.onrender.com/p/$slug';
   }
 
   void dispose() {

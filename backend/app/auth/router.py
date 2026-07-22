@@ -14,8 +14,12 @@ from app.services.email import email_service
 from app.services.google_oauth import google_oauth_service
 from app.config import settings
 from uuid import uuid4
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import hashlib
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -39,7 +43,7 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     otp_record = OTPCode(
         id=uuid4(), user_id=user.id if user else None,
         code=hashlib.sha256(otp.encode()).hexdigest(),
-        purpose="verify", is_used=False, expires_at=datetime.utcnow() + timedelta(minutes=10),
+        purpose="verify", is_used=False, expires_at=_utcnow() + timedelta(minutes=10),
     )
     db.add(otp_record)
     await db.commit()
@@ -80,7 +84,7 @@ async def send_otp(body: SendOtpRequest, db: AsyncSession = Depends(get_db)):
     recent_otps = await db.execute(
         sa_select(sa_func.count()).select_from(OTPCode).where(
             OTPCode.user_id == user.id,
-            OTPCode.created_at > datetime.utcnow() - timedelta(minutes=5),
+            OTPCode.created_at > _utcnow() - timedelta(minutes=5),
         )
     )
     if recent_otps.scalar() >= 3:
@@ -90,7 +94,7 @@ async def send_otp(body: SendOtpRequest, db: AsyncSession = Depends(get_db)):
     otp_record = OTPCode(
         id=uuid4(), user_id=user.id,
         code=hashlib.sha256(otp.encode()).hexdigest(),
-        purpose=body.purpose, is_used=False, expires_at=datetime.utcnow() + timedelta(minutes=10),
+        purpose=body.purpose, is_used=False, expires_at=_utcnow() + timedelta(minutes=10),
     )
     db.add(otp_record)
     await db.commit()
@@ -154,7 +158,7 @@ async def google_callback(code: str = None, state: str = None, db: AsyncSession 
         session = UserSession(
             id=uuid4(), user_id=existing_user.id, refresh_token=refresh_token,
             is_active=True,
-            expires_at=datetime.utcnow() + timedelta(days=7),
+            expires_at=_utcnow() + timedelta(days=7),
         )
         db.add(session)
         await db.commit()
@@ -186,7 +190,7 @@ async def google_callback(code: str = None, state: str = None, db: AsyncSession 
     session = UserSession(
         id=uuid4(), user_id=new_user.id, refresh_token=refresh_token,
         is_active=True,
-        expires_at=datetime.utcnow() + timedelta(days=7),
+        expires_at=_utcnow() + timedelta(days=7),
     )
     db.add(session)
     await db.commit()
@@ -226,7 +230,7 @@ async def google_verify_id_token(body: dict, request: Request, db: AsyncSession 
         session = UserSession(
             id=uuid4(), user_id=existing_user.id, refresh_token=refresh_token,
             is_active=True, ip_address=ip, user_agent=ua,
-            expires_at=datetime.utcnow() + timedelta(days=7),
+            expires_at=_utcnow() + timedelta(days=7),
         )
         db.add(session)
         await db.commit()
@@ -266,7 +270,7 @@ async def google_verify_id_token(body: dict, request: Request, db: AsyncSession 
     session = UserSession(
         id=uuid4(), user_id=new_user.id, refresh_token=refresh_token,
         is_active=True, ip_address=ip, user_agent=ua,
-        expires_at=datetime.utcnow() + timedelta(days=7),
+        expires_at=_utcnow() + timedelta(days=7),
     )
     db.add(session)
     await db.commit()

@@ -10,7 +10,7 @@ import '../../widgets/loading_overlay.dart';
 
 class FavoritesScreen extends StatefulWidget {
   final VoidCallback onPropertyTap;
-  final void Function(int)? onPropertyDetail;
+  final void Function(String propertyId)? onPropertyDetail;
 
   const FavoritesScreen({super.key, required this.onPropertyTap, this.onPropertyDetail});
 
@@ -171,7 +171,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           onTap: () {
             showApexLoadingThen(context, () {
               if (widget.onPropertyDetail != null) {
-                widget.onPropertyDetail!(i);
+                widget.onPropertyDetail!(prop.id);
               } else {
                 widget.onPropertyTap();
               }

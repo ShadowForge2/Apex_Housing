@@ -1,5 +1,5 @@
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import Optional, List
@@ -165,7 +165,7 @@ class UserService:
             document_type=document_type,
             document_url=document_url,
             status=status,
-            reviewed_at=datetime.utcnow() if not needs_review else None,
+            reviewed_at=datetime.now(timezone.utc) if not needs_review else None,
         )
         self.db.add(doc)
 

@@ -15,16 +15,16 @@ def cleanup_expired_otps():
     logger.info("Cleaning up expired OTP codes")
 
     async def _cleanup():
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
         from sqlalchemy import delete
         from app.database import async_session
         from app.auth.models import OTPCode
 
-        cutoff = datetime.utcnow() - timedelta(hours=24)
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
         async with async_session() as db:
             result = await db.execute(
                 delete(OTPCode).where(
-                    (OTPCode.expires_at < datetime.utcnow()) |
+                    (OTPCode.expires_at < datetime.now(timezone.utc)) |
                     ((OTPCode.is_used == True) & (OTPCode.created_at < cutoff))
                 )
             )

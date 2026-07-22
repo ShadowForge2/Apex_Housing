@@ -380,7 +380,7 @@ async def update_platform_settings(
     db: AsyncSession = Depends(get_db),
 ):
     from uuid import uuid4 as _uuid
-    from datetime import datetime
+    from datetime import datetime, timezone
     updates = body.model_dump(exclude_none=True)
 
     # Auto-split: when platform_fee_percentage changes, derive markup and markdown as half each
@@ -400,7 +400,7 @@ async def update_platform_settings(
         else:
             row = PlatformSetting(
                 id=_uuid(), key=key, value=str_val,
-                updated_by=user.id, updated_at=datetime.utcnow(),
+                updated_by=user.id, updated_at=datetime.now(timezone.utc),
             )
             db.add(row)
     await db.commit()
@@ -591,7 +591,7 @@ async def send_group_chat_message(
     from app.users.models import User, Profile
     from app.notifications.service import NotificationService
     from uuid import uuid4 as _uuid
-    from datetime import datetime
+    from datetime import datetime, timezone
 
     result = await db.execute(
         select(Conversation).where(
@@ -619,7 +619,7 @@ async def send_group_chat_message(
     )
     db.add(message)
 
-    conv.last_message_at = datetime.utcnow()
+    conv.last_message_at = datetime.now(timezone.utc)
     conv.last_message_preview = body.content[:100]
 
     unread_result = await db.execute(
@@ -789,7 +789,7 @@ async def remove_group_chat_member(
     db: AsyncSession = Depends(get_db),
 ):
     from app.messages.models import Conversation, ConversationParticipant
-    from datetime import datetime
+    from datetime import datetime, timezone
 
     result = await db.execute(
         select(Conversation).where(
@@ -811,7 +811,7 @@ async def remove_group_chat_member(
     if not participant:
         raise NotFound("User is not a member of this group chat")
 
-    participant.left_at = datetime.utcnow()
+    participant.left_at = datetime.now(timezone.utc)
     await db.commit()
 
     return SuccessResponse(message="Member removed from group chat")

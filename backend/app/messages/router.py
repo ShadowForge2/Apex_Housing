@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, UploadFile, File, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.database import get_db
 from app.dependencies import get_current_user, get_tenant
@@ -159,7 +159,7 @@ async def edit_message(message_id: UUID, content: str, user: User = Depends(get_
 
     message.content = content
     message.is_edited = True
-    message.edited_at = datetime.utcnow()
+    message.edited_at = datetime.now(timezone.utc)
     await db.commit()
 
     return SuccessResponse(message="Message edited", data={"id": str(message.id), "content": message.content, "is_edited": True})
@@ -176,7 +176,7 @@ async def delete_message(message_id: UUID, user: User = Depends(get_current_user
         raise BadRequest("Message already deleted")
 
     message.is_deleted = True
-    message.deleted_at = datetime.utcnow()
+    message.deleted_at = datetime.now(timezone.utc)
     message.content = "[deleted]"
     await db.commit()
 
@@ -243,7 +243,7 @@ async def leave_conversation(conversation_id: UUID, user: User = Depends(get_cur
     if not participant:
         raise BadRequest("You are not a participant in this conversation")
 
-    participant.left_at = datetime.utcnow()
+    participant.left_at = datetime.now(timezone.utc)
     participant.is_muted = True
     await db.commit()
 
@@ -269,7 +269,7 @@ async def mark_conversation_read(conversation_id: UUID, user: User = Depends(get
     )
     unread_messages = unread_result.scalars().all()
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     for msg in unread_messages:
         existing = await db.execute(
             select(MessageReadReceipt).where(

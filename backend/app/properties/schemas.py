@@ -36,8 +36,8 @@ class PropertyLocationCreate(BaseModel):
     state: str
     country: str = "Nigeria"
     zip_code: Optional[str] = None
-    latitude: float
-    longitude: float
+    latitude: float = 0.0
+    longitude: float = 0.0
     neighborhood: Optional[str] = None
 
 

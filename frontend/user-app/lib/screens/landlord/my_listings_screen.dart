@@ -99,10 +99,19 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
             return p.isAvailable && !p.isBooked;
           }).toList();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 16),
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text('My Listings'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 16),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Row(
@@ -269,7 +278,8 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                           ),
                         ),
         ),
-      ],
+        ],
+      ),
     );
   }
 }

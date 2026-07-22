@@ -45,6 +45,10 @@ class CommissionRule(BaseModelIdOnlyMixin, Base):
 class CommissionLog(BaseModelIdOnlyMixin, Base):
     __tablename__ = "commission_logs"
 
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.utcnow, nullable=False
+    )
+
     commission_rule_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("commission_rules.id", ondelete="SET NULL"),

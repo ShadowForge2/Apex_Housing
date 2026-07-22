@@ -6,6 +6,8 @@ import '../../widgets/loading_overlay.dart';
 import '../../services/property_service.dart';
 import '../../services/amenity_service.dart';
 import '../../services/app_state_restoration.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 
 class AddPropertyScreen extends StatefulWidget {
   const AddPropertyScreen({super.key});
@@ -31,6 +33,8 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with AppStateRest
     'deposit': _depositController.text,
     'propertyType': _propertyType,
     'amenities': _selectedAmenities.toList(),
+    'latitude': _latitude,
+    'longitude': _longitude,
   };
 
   @override
@@ -46,6 +50,8 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with AppStateRest
     _depositController.text = data['deposit'] ?? '';
     _propertyType = data['propertyType'] ?? 'Apartment';
     _selectedAmenities = Set<String>.from(data['amenities'] ?? []);
+    _latitude = data['latitude'] as double?;
+    _longitude = data['longitude'] as double?;
     if (mounted) setState(() {});
   }
   final _types = ['Apartment', 'House', 'Studio', 'Penthouse', 'Duplex'];
@@ -66,10 +72,54 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with AppStateRest
   final _bathroomsController = TextEditingController();
   final _depositController = TextEditingController();
 
+  double? _latitude;
+  double? _longitude;
+  bool _isGettingLocation = false;
+
   @override
   void initState() {
     super.initState();
     _loadAmenities();
+  }
+
+  Future<void> _useMyLocation() async {
+    setState(() => _isGettingLocation = true);
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location permission denied')));
+          return;
+        }
+      }
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location permission permanently denied. Enable in settings.')));
+        return;
+      }
+      final position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      _latitude = position.latitude;
+      _longitude = position.longitude;
+
+      try {
+        final placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+        if (placemarks.isNotEmpty) {
+          final place = placemarks.first;
+          _addressController.text = [place.street, place.subLocality].where((e) => e != null && e.isNotEmpty).join(', ');
+          _cityController.text = place.locality ?? '';
+          _stateController.text = place.administrativeArea ?? '';
+        }
+      } catch (_) {}
+
+      if (mounted) {
+        setState(() {});
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location captured')));
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to get location: $e')));
+    } finally {
+      if (mounted) setState(() => _isGettingLocation = false);
+    }
   }
 
   @override
@@ -135,6 +185,8 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with AppStateRest
         address: _addressController.text.trim().isNotEmpty ? _addressController.text.trim() : null,
         city: _cityController.text.trim().isNotEmpty ? _cityController.text.trim() : null,
         state: _stateController.text.trim().isNotEmpty ? _stateController.text.trim() : null,
+        latitude: _latitude,
+        longitude: _longitude,
         rentAmount: rentAmount > 0 ? rentAmount : null,
         securityDeposit: deposit > 0 ? deposit : null,
         agentTerms: _termsController.text.trim().isNotEmpty ? _termsController.text.trim() : null,
@@ -197,6 +249,40 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with AppStateRest
             _buildTextArea('Enter your terms and conditions for this listing...', controller: _termsController),
             const SizedBox(height: 20),
             _buildLabel('Location'),
+            const SizedBox(height: 12),
+            GestureDetector(
+              onTap: _isGettingLocation ? null : _useMyLocation,
+              child: Container(
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (_isGettingLocation)
+                      const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
+                    else
+                      Icon(
+                        _latitude != null ? Icons.check_circle_outline : Icons.my_location_rounded,
+                        size: 18,
+                        color: _latitude != null ? AppColors.success : AppColors.primary,
+                      ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _latitude != null ? 'Location captured — tap to update' : 'Use my current location',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: _latitude != null ? AppColors.success : AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
             const SizedBox(height: 12),
             _buildInput('Address or area', controller: _addressController),
             const SizedBox(height: 20),

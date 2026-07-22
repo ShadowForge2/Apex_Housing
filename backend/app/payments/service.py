@@ -337,12 +337,18 @@ class PaymentService:
         return account
 
     async def verify_bank_account(self, account_number: str, bank_code: str) -> dict:
-        account_result = await paystack_service.resolve_account(
-            account_number=account_number,
-            bank_code=bank_code,
-        )
+        try:
+            account_result = await paystack_service.resolve_account(
+                account_number=account_number,
+                bank_code=bank_code,
+            )
+        except Exception as exc:
+            logger.error(f"Paystack resolve_account failed: {exc}")
+            return {"verified": False, "account_name": None, "error": "Verification service unavailable"}
+
         if not account_result.get("status"):
-            return {"verified": False, "account_name": None}
+            msg = account_result.get("message", "Account not found")
+            return {"verified": False, "account_name": None, "error": msg}
 
         return {
             "verified": True,

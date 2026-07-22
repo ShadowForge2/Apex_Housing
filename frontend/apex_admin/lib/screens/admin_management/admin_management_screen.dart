@@ -528,35 +528,33 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
             ),
           ),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              _actionButton(
-                Icons.admin_panel_settings_outlined,
-                'Edit Role',
-                AppColors.primary,
-                isSuperAdmin ? null : () => _showChangeRoleDialog(admin),
-                disabled: isSuperAdmin,
-              ),
-              const SizedBox(width: 8),
-              _actionButton(
-                admin.status == AdminTeamStatus.suspended
-                    ? Icons.check_circle_outline
-                    : Icons.block_outlined,
-                admin.status == AdminTeamStatus.suspended ? 'Unsuspend' : 'Suspend',
-                admin.status == AdminTeamStatus.suspended ? AppColors.success : AppColors.warning,
-                isSuperAdmin ? null : () => _toggleSuspend(admin),
-                disabled: isSuperAdmin,
-              ),
-              const Spacer(),
-              _actionButton(
-                Icons.person_remove_outlined,
-                'Remove',
-                AppColors.error,
-                isSuperAdmin ? null : () => _showRemoveDialog(admin),
-                disabled: isSuperAdmin,
-              ),
-            ],
-          ),
+          if (!isSuperAdmin)
+            Row(
+              children: [
+                _actionButton(
+                  Icons.admin_panel_settings_outlined,
+                  'Edit Role',
+                  AppColors.primary,
+                  () => _showChangeRoleDialog(admin),
+                ),
+                const SizedBox(width: 8),
+                _actionButton(
+                  admin.status == AdminTeamStatus.suspended
+                      ? Icons.check_circle_outline
+                      : Icons.block_outlined,
+                  admin.status == AdminTeamStatus.suspended ? 'Unsuspend' : 'Suspend',
+                  admin.status == AdminTeamStatus.suspended ? AppColors.success : AppColors.warning,
+                  () => _toggleSuspend(admin),
+                ),
+                const Spacer(),
+                _actionButton(
+                  Icons.person_remove_outlined,
+                  'Remove',
+                  AppColors.error,
+                  () => _showRemoveDialog(admin),
+                ),
+              ],
+            ),
         ],
       ),
     );
@@ -569,31 +567,29 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
     VoidCallback? onTap, {
     bool disabled = false,
   }) {
+    if (disabled) return const SizedBox.shrink();
     return GestureDetector(
       onTap: onTap,
-      child: Opacity(
-        opacity: disabled ? 0.35 : 1.0,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(AppRadius.sm),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 15, color: color),
-              const SizedBox(width: 5),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: color,
-                ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 15, color: color),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: color,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -954,24 +950,34 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
               await runWithLoading(
                 context,
                 action: () async {
-                  await Future.delayed(const Duration(milliseconds: 800));
-                  setState(() {
-                    final index = _admins.indexOf(admin);
-                    if (index != -1) {
-                      final current = _admins[index];
-                      _admins[index] = AdminTeamMember(
-                        name: current.name,
-                        email: current.email,
-                        id: current.id,
-                        role: current.role,
-                        status: current.status == AdminTeamStatus.active
-                            ? AdminTeamStatus.suspended
-                            : AdminTeamStatus.active,
-                        lastActive: current.lastActive,
-                        avatar: current.avatar,
-                      );
+                  try {
+                    if (isSuspending) {
+                      await AdminService().suspendUser(admin.id);
+                    } else {
+                      await AdminService().activateUser(admin.id);
                     }
-                  });
+                    setState(() {
+                      final index = _admins.indexOf(admin);
+                      if (index != -1) {
+                        final current = _admins[index];
+                        _admins[index] = AdminTeamMember(
+                          name: current.name,
+                          email: current.email,
+                          id: current.id,
+                          role: current.role,
+                          status: isSuspending
+                              ? AdminTeamStatus.suspended
+                              : AdminTeamStatus.active,
+                          lastActive: current.lastActive,
+                          avatar: current.avatar,
+                        );
+                      }
+                    });
+                  } catch (e) {
+                    if (mounted) {
+                      showAppToast(context, 'Failed: $e', backgroundColor: AppColors.error);
+                    }
+                  }
                 },
                 message: isSuspending ? 'Suspending admin...' : 'Unsuspending admin...',
               );

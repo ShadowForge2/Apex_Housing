@@ -49,6 +49,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
               joinDate: u['created_at'] as String? ?? '',
               totalBookings: u['total_bookings'] as int? ?? 0,
               avatar: initials.isNotEmpty ? initials.toUpperCase() : (u['email'] as String? ?? 'U').substring(0, 2).toUpperCase(),
+              isSuperAdmin: u['is_super_admin'] == true,
             );
           }).toList();
           _isLoading = false;
@@ -302,15 +303,35 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      user.name,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.text,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            user.name,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.text,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (user.isSuperAdmin) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(AppRadius.pill),
+                            ),
+                            child: const Text(
+                              'Super Admin',
+                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.primary),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -373,14 +394,16 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                 AppColors.primary,
                 () => _showUserDetail(user),
               ),
-              const SizedBox(width: 8),
-              _actionIcon(
-                user.status == 'Suspended'
-                    ? Icons.check_circle_outline
-                    : Icons.block_outlined,
-                user.status == 'Suspended' ? AppColors.success : AppColors.warning,
-                () => _toggleUserStatus(user),
-              ),
+              if (!user.isSuperAdmin) ...[
+                const SizedBox(width: 8),
+                _actionIcon(
+                  user.status == 'Suspended'
+                      ? Icons.check_circle_outline
+                      : Icons.block_outlined,
+                  user.status == 'Suspended' ? AppColors.success : AppColors.warning,
+                  () => _toggleUserStatus(user),
+                ),
+              ],
             ],
           ),
         ],
@@ -566,33 +589,35 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () {
-                        Navigator.pop(context);
-                        _toggleUserStatus(user);
-                      },
-                      child: Container(
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: user.status == 'Suspended'
-                              ? AppColors.success
-                              : AppColors.warning,
-                          borderRadius: BorderRadius.circular(AppRadius.md),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          user.status == 'Suspended' ? 'Unsuspend' : 'Suspend',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textWhite,
+                  if (!user.isSuperAdmin) ...[
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.pop(context);
+                          _toggleUserStatus(user);
+                        },
+                        child: Container(
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: user.status == 'Suspended'
+                                ? AppColors.success
+                                : AppColors.warning,
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            user.status == 'Suspended' ? 'Unsuspend' : 'Suspend',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textWhite,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ],

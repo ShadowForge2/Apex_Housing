@@ -389,17 +389,22 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   Widget _buildErrorState(ThemeColors tc) {
+    final errorStr = _error ?? '';
+    final isConn = errorStr.contains('No internet connection') ||
+        errorStr.contains('Connection timed out') ||
+        errorStr.contains('SocketException') ||
+        errorStr.contains('connectionError');
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(width: 72, height: 72, decoration: BoxDecoration(color: AppColors.error.withValues(alpha: 0.1), shape: BoxShape.circle), child: const Icon(Icons.error_outline, size: 32, color: AppColors.error)),
+            Container(width: 72, height: 72, decoration: BoxDecoration(color: (isConn ? AppColors.error : AppColors.warning).withValues(alpha: 0.1), shape: BoxShape.circle), child: Icon(isConn ? Icons.wifi_off_rounded : Icons.chat_bubble_outline, size: 32, color: isConn ? AppColors.error : AppColors.warning)),
             const SizedBox(height: 16),
-            Text('Unable to connect', style: TextStyle(color: tc.subtitle, fontSize: 15, fontWeight: FontWeight.w600)),
+            Text(isConn ? 'Unable to connect' : 'No conversations yet', style: TextStyle(color: tc.subtitle, fontSize: 15, fontWeight: FontWeight.w600)),
             const SizedBox(height: 4),
-            Text('Check your connection and try again', style: TextStyle(color: tc.hint, fontSize: 13)),
+            Text(isConn ? 'Check your connection and try again' : 'Start a conversation from a property listing', style: TextStyle(color: tc.hint, fontSize: 13)),
             const SizedBox(height: 20),
             GestureDetector(
               onTap: _fetchConversations,

@@ -63,6 +63,10 @@ class ConversationParticipant(BaseModelIdOnlyMixin, Base):
 class Message(BaseModelIdOnlyMixin, Base):
     __tablename__ = "messages"
 
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.utcnow, nullable=False
+    )
+
     conversation_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("conversations.id", ondelete="CASCADE"),

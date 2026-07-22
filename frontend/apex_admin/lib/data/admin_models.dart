@@ -89,6 +89,7 @@ class AdminUser {
   final String joinDate;
   final int totalBookings;
   final String avatar;
+  final bool isSuperAdmin;
 
   const AdminUser({
     required this.name,
@@ -101,6 +102,7 @@ class AdminUser {
     required this.joinDate,
     required this.totalBookings,
     required this.avatar,
+    this.isSuperAdmin = false,
   });
 }
 

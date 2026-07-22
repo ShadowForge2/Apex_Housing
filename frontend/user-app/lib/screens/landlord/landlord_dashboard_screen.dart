@@ -86,9 +86,11 @@ class _LandlordDashboardScreenState extends State<LandlordDashboardScreen> {
         });
       }
     } catch (e) {
+      final msg = e.toString();
+      final isForbidden = msg.contains('403') || msg.contains('Forbidden') || msg.contains('permission');
       if (mounted) {
         setState(() {
-          _error = e.toString();
+          _error = isForbidden ? 'landlord_required' : msg;
           _isLoading = false;
         });
       }
@@ -110,11 +112,25 @@ class _LandlordDashboardScreenState extends State<LandlordDashboardScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.wifi_off_rounded, size: 48, color: AppColors.error),
+                        Icon(
+                          _error == 'landlord_required' ? Icons.person_add_outlined : Icons.wifi_off_rounded,
+                          size: 48,
+                          color: _error == 'landlord_required' ? AppColors.primary : AppColors.error,
+                        ),
                         const SizedBox(height: 16),
-                        const Text('Unable to connect', textAlign: TextAlign.center, style: TextStyle(color: AppColors.subtitle, fontWeight: FontWeight.w600)),
+                        Text(
+                          _error == 'landlord_required' ? 'Landlord account required' : 'Unable to connect',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: AppColors.subtitle, fontWeight: FontWeight.w600),
+                        ),
                         const SizedBox(height: 4),
-                        const Text('Check your connection and try again', textAlign: TextAlign.center, style: TextStyle(color: AppColors.hint, fontSize: 13)),
+                        Text(
+                          _error == 'landlord_required'
+                              ? 'Go to Profile and switch to Landlord mode to access this dashboard.'
+                              : 'Check your connection and try again',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: AppColors.hint, fontSize: 13),
+                        ),
                         const SizedBox(height: 16),
                         TextButton(onPressed: _loadData, child: const Text('Retry')),
                       ],

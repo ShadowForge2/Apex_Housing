@@ -22,6 +22,10 @@ from app.database import Base
 class Transaction(BaseModelIdOnlyMixin, Base):
     __tablename__ = "transactions"
 
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.utcnow, nullable=False
+    )
+
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -175,6 +179,10 @@ class Wallet(BaseModelIdOnlyMixin, Base):
 
 class WalletWithdrawal(BaseModelIdOnlyMixin, Base):
     __tablename__ = "wallet_withdrawals"
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.utcnow, nullable=False
+    )
 
     wallet_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),

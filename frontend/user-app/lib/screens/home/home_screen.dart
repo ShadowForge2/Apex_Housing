@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/apex_loading.dart';
 import '../../theme/theme_colors.dart';
@@ -134,13 +135,31 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _fetchNearbyProperties() async {
-    final position = await _locationService.getCurrentLocation();
+    Position? position = await _locationService.getCurrentLocation();
     if (position == null) {
-      setState(() {
-        _error = 'Location permission is required to find houses near you. Please enable it in settings.';
-        _isLoading = false;
-      });
-      return;
+      final prefs = await SharedPreferences.getInstance();
+      final lat = prefs.getDouble('user_latitude');
+      final lng = prefs.getDouble('user_longitude');
+      if (lat != null && lng != null) {
+        position = Position(
+          latitude: lat,
+          longitude: lng,
+          timestamp: DateTime.now(),
+          accuracy: 0,
+          altitude: 0,
+          heading: 0,
+          speed: 0,
+          speedAccuracy: 0,
+          altitudeAccuracy: 0,
+          headingAccuracy: 0,
+        );
+      } else {
+        setState(() {
+          _error = 'Location permission is required to find houses near you. Please enable it in settings.';
+          _isLoading = false;
+        });
+        return;
+      }
     }
     _locationLoaded = true;
     try {
@@ -435,6 +454,13 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  bool _isConnectionError(String error) {
+    return error.contains('No internet connection') ||
+        error.contains('Connection timed out') ||
+        error.contains('SocketException') ||
+        error.contains('connectionError');
+  }
+
   Widget _buildFeaturedListings() {
     if (_isLoading) {
       return SizedBox(
@@ -445,17 +471,28 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
     if (_error != null) {
+      final isConn = _isConnectionError(_error!);
       return SizedBox(
         height: 290,
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.wifi_off_rounded, size: 48, color: Colors.grey[400]),
+              Icon(
+                isConn ? Icons.wifi_off_rounded : Icons.error_outline_rounded,
+                size: 48,
+                color: Colors.grey[400],
+              ),
               const SizedBox(height: 12),
-              Text('Unable to connect', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w600)),
+              Text(
+                isConn ? 'Unable to connect' : 'No listings found',
+                style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w600),
+              ),
               const SizedBox(height: 4),
-              Text('Check your connection and try again', style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+              Text(
+                isConn ? 'Check your connection and try again' : 'No properties match your current filters',
+                style: TextStyle(color: Colors.grey[500], fontSize: 13),
+              ),
               const SizedBox(height: 8),
               TextButton(onPressed: _fetchProperties, child: const Text('Retry')),
             ],
@@ -472,7 +509,7 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Icon(Icons.home_work_outlined, size: 48, color: Colors.grey[400]),
               const SizedBox(height: 12),
-              Text('No properties available', style: TextStyle(color: Colors.grey[600])),
+              Text('No listings found', style: TextStyle(color: Colors.grey[600])),
             ],
           ),
         ),

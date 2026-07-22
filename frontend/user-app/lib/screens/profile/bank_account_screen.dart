@@ -82,7 +82,7 @@ class _BankAccountScreenState extends State<BankAccountScreen> {
         _selectedBank!['code'] ?? '',
       );
 
-      if (result['verified'] == true && result['account_name'] != null) {
+      if (result['verified'] == true && result['account_name'] != null && (result['account_name'] as String).isNotEmpty) {
         setState(() {
           _resolvedAccountName = result['account_name'];
           _nameController.text = result['account_name'];
@@ -94,14 +94,14 @@ class _BankAccountScreenState extends State<BankAccountScreen> {
           _verified = false;
           _resolvedAccountName = null;
           _isVerifying = false;
-          _error = 'Account not found. Please check details.';
+          _error = 'Could not resolve account name. Please check your bank and account number.';
         });
       }
     } catch (e) {
       setState(() {
         _isVerifying = false;
         _verified = false;
-        _error = 'Verification failed. Try again.';
+        _error = 'Verification service unavailable. Please try again later.';
       });
     }
   }

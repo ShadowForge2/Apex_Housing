@@ -309,6 +309,47 @@ class _MapExploreScreenState extends State<MapExploreScreen> {
 
   List<Marker> _buildMarkers(ThemeColors tc) {
     final markers = <Marker>[];
+
+    final position = _locationService.currentPosition;
+    if (position != null) {
+      markers.add(
+        Marker(
+          point: LatLng(position.latitude, position.longitude),
+          width: 140,
+          height: 56,
+          alignment: Alignment.bottomCenter,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.blue,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [BoxShadow(blurRadius: 6, color: Colors.black26)],
+                ),
+                child: const Text(
+                  'Your location',
+                  style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Container(
+                width: 18,
+                height: 18,
+                decoration: BoxDecoration(
+                  color: Colors.blue,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 3),
+                  boxShadow: [BoxShadow(blurRadius: 6, color: Colors.blue.withOpacity(0.4))],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     for (int i = 0; i < _properties.length; i++) {
       final p = _properties[i];
       if (p.latitude == null || p.longitude == null) continue;

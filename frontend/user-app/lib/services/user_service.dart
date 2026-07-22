@@ -236,7 +236,7 @@ class UserService {
     String? label,
   }) async {
     final responseData = <String, dynamic>{
-      'data': signatureData,
+      'signature_data': signatureData,
     };
     if (label != null) responseData['label'] = label;
 

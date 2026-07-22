@@ -490,6 +490,8 @@ class PropertyService {
     String? address,
     String? city,
     String? state,
+    double? latitude,
+    double? longitude,
     double? rentAmount,
     double? securityDeposit,
     double? serviceFee,
@@ -507,6 +509,8 @@ class PropertyService {
         if (address != null) 'address': address,
         if (city != null) 'city': city,
         if (state != null) 'state': state,
+        if (latitude != null) 'latitude': latitude,
+        if (longitude != null) 'longitude': longitude,
       };
     }
     if (rentAmount != null || securityDeposit != null || serviceFee != null) {

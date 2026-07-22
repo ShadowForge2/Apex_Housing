@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:math' as math;
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/theme_provider.dart';
 import '../../theme/theme_colors.dart';
@@ -12,6 +13,7 @@ import '../../services/user_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/token_storage.dart';
 import '../../services/location_service.dart';
+import '../../services/api_client.dart';
 import 'edit_profile_screen.dart';
 import 'kyc_verification_screen.dart';
 import 'signature_screen.dart';
@@ -103,11 +105,21 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         if (address != null) {
           final city = address['city'] ?? address['town'] ?? address['village'] ?? address['state'] ?? '';
           final country = address['country'] ?? '';
-          if (mounted) setState(() => _location = '$city, $country'.trim().replaceAll(RegExp(r'^,\s*'), ''));
+          final locationStr = '$city, $country'.trim().replaceAll(RegExp(r'^,\s*'), '');
+          if (mounted) setState(() => _location = locationStr);
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('user_location', locationStr);
+          await prefs.setDouble('user_latitude', position.latitude);
+          await prefs.setDouble('user_longitude', position.longitude);
         }
       }
     } catch (e) {
       debugPrint('ProfileScreen: Failed to load location: $e');
+      if (_location.isEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        final saved = prefs.getString('user_location');
+        if (saved != null && mounted) setState(() => _location = saved);
+      }
     }
   }
 
@@ -292,27 +304,33 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               Icons.swap_horiz_rounded,
               isLandlord ? 'Switch to Tenant' : 'Switch to Landlord',
               tc,
-              onTap: () {
+              onTap: () async {
                 final targetRole = isLandlord ? UserRole.tenant : UserRole.landlord;
                 final isFirstTime = !_visitedRoles.contains(targetRole);
-                showApexLoadingThen(
-                  context,
-                  () {
-                    role.switchRole();
-                    _visitedRoles.add(targetRole);
-                    if (isFirstTime) {
-                      if (targetRole == UserRole.landlord) {
-                        _showToast('You are now in Landlord mode. You can now list properties!');
-                      } else {
-                        _showToast('You are now in Tenant mode. You can now book listings!');
-                      }
+                final roleStr = targetRole == UserRole.landlord ? 'landlord' : 'tenant';
+                showApexLoading(context, duration: const Duration(seconds: 30), label: 'Switching profile...');
+                try {
+                  await ApiClient.instance.post('/users/switch-role', data: {'role': roleStr});
+                  dismissApexLoading();
+                  if (!mounted) return;
+                  role.switchRole();
+                  _visitedRoles.add(targetRole);
+                  if (isFirstTime) {
+                    if (targetRole == UserRole.landlord) {
+                      _showToast('You are now in Landlord mode. You can now list properties!');
                     } else {
-                      _showToast('Switched to ${targetRole == UserRole.landlord ? "Landlord" : "Tenant"} profile');
+                      _showToast('You are now in Tenant mode. You can now book listings!');
                     }
-                  },
-                  duration: const Duration(seconds: 2),
-                  label: 'Switching profile...',
-                );
+                  } else {
+                    _showToast('Switched to ${targetRole == UserRole.landlord ? "Landlord" : "Tenant"} profile');
+                  }
+                } catch (e) {
+                  dismissApexLoading();
+                  if (!mounted) return;
+                  final msg = e.toString();
+                  final isAlready = msg.contains('Already');
+                  _showToast(isAlready ? 'Role already set to $roleStr' : 'Failed to switch role: $msg');
+                }
               },
               highlight: true,
             ),

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Request, HTTPException
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -70,11 +71,12 @@ async def login(body: LoginRequest, request: Request, db: AsyncSession = Depends
         result = await db.execute(sa_select(UserModel).where(UserModel.email == body.email))
         user = result.scalar_one_or_none()
         if user:
-            is_admin = str(user.role) == "ADMIN"
+            role_str = str(user.role.value) if hasattr(user.role, 'value') else str(user.role)
+            is_admin = role_str == "ADMIN"
             if body.client_type == "admin" and not is_admin:
-                raise HTTPException(status_code=403, detail="Admin login required. Please login with your admin account.")
+                return JSONResponse(status_code=403, content={"message": "Admin login required. Please login with your admin account."})
             if body.client_type == "user" and is_admin:
-                raise HTTPException(status_code=403, detail="Admin account detected. Please login with the admin app.")
+                return JSONResponse(status_code=403, content={"message": "Admin account detected. Please login with the admin app."})
 
     tokens = await service.login(email=body.email, password=body.password, ip_address=ip, user_agent=ua)
     return SuccessResponse(message="Login successful", data=tokens)

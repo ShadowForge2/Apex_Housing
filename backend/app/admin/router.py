@@ -245,7 +245,7 @@ async def list_admins(page: int = 1, page_size: int = 20, user=Depends(get_admin
 @router.post("/admins/invite", response_model=SuccessResponse)
 async def invite_admin(body: AdminInviteRequest, user=Depends(get_super_admin), db: AsyncSession = Depends(get_db)):
     service = AdminService(db)
-    result = await service.invite_admin(user.id, body.email)
+    result = await service.invite_admin(user.id, body.email, role=body.role)
     return SuccessResponse(message="Admin invited", data=result)
 
 @router.delete("/admins/{user_id}", response_model=SuccessResponse)

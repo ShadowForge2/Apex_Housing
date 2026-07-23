@@ -436,15 +436,22 @@ class AdminService:
         )
         return result.scalar()
 
-    async def invite_admin(self, super_admin_id: UUID, email: str) -> dict:
-        existing = await self.db.execute(select(User).where(User.email == email))
+    async def invite_admin(self, super_admin_id: UUID, email: str, role: str = "ADMIN") -> dict:
+        existing = await self.db.execute(
+            select(User).where(func.lower(User.email) == email.lower())
+        )
         if existing.scalar_one_or_none():
             raise Conflict("User with this email already exists")
+
+        try:
+            role_enum = UserRole(role.lower())
+        except ValueError:
+            role_enum = UserRole.ADMIN
 
         user = User(
             id=uuid4(), email=email,
             password_hash=hash_password(uuid4().hex),
-            role=UserRole.ADMIN, is_super_admin=False,
+            role=role_enum, is_super_admin=False,
             is_active=False, is_verified=False,
         )
         self.db.add(user)
@@ -455,10 +462,11 @@ class AdminService:
         await self.record_action(super_admin_id, AdminActionRequest(
             action="invite_admin",
             target_type="user", target_id=user.id,
-            details={"email": email},
+            details={"email": email, "role": role_enum.value},
         ))
         await self.db.commit()
 
+        email_sent = False
         try:
             from app.services.email import email_service
             inviter_result = await self.db.execute(select(User).where(User.id == super_admin_id))
@@ -475,7 +483,7 @@ class AdminService:
         except Exception as e:
             logger.error(f"Admin invite email error for {email}: {e}")
 
-        return {"id": str(user.id), "email": email, "role": "ADMIN"}
+        return {"id": str(user.id), "email": email, "role": role_enum.value, "email_sent": email_sent}
 
     async def remove_admin(self, super_admin_id: UUID, user_id: UUID) -> dict:
         result = await self.db.execute(select(User).where(User.id == user_id))

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, EmailStr
 from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
@@ -59,7 +59,7 @@ class KYCApprovalRequest(BaseModel):
     rejection_reason: Optional[str] = None
 
 class AdminInviteRequest(BaseModel):
-    email: str
+    email: EmailStr
     role: str = "ADMIN"
 
 class AdminRoleChangeRequest(BaseModel):

@@ -330,7 +330,9 @@ class AuthService:
         return user
 
     async def request_admin_access(self, email: str, password: str) -> dict:
-        result = await self.db.execute(select(User).where(User.email == email))
+        result = await self.db.execute(
+            select(User).where(func.lower(User.email) == email.lower())
+        )
         user = result.scalar_one_or_none()
         if not user:
             raise NotFound("No invitation found for this email. Contact the super admin.")

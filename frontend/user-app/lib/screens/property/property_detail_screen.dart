@@ -8,8 +8,11 @@ import '../../widgets/apex_loading.dart';
 import '../../services/property_service.dart';
 import '../../services/review_service.dart';
 import '../../services/booking_service.dart';
+import '../../services/message_service.dart';
+import '../../services/token_storage.dart';
 import '../../widgets/loading_overlay.dart';
 import '../profile/public_profile_screen.dart';
+import '../messages/chat_detail_screen.dart';
 
 class PropertyDetailScreen extends StatefulWidget {
   final Property? property;
@@ -48,6 +51,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   final ReviewService _reviewService = ReviewService();
   List<ReviewModel> _reviews = [];
   bool _isLoadingReviews = false;
+  bool _hasActiveBooking = false;
+  bool _isStartingChat = false;
 
   @override
   void initState() {
@@ -55,6 +60,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
     _pageController = PageController();
     if (widget.property != null) {
       _fetchReviews(widget.property!.id);
+      _checkBookingStatus(widget.property!.id);
     } else if (widget._slug != null) {
       _fetchPropertyBySlug(widget._slug!);
     } else if (widget.propertyId != null) {
@@ -75,6 +81,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
           _isLoadingProperty = false;
         });
         _fetchReviews(model.id);
+        _checkBookingStatus(model.id);
       }
     } catch (e) {
       if (mounted) {
@@ -99,6 +106,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
           _isLoadingProperty = false;
         });
         _fetchReviews(id);
+        _checkBookingStatus(id);
       }
     } catch (e) {
       if (mounted) {
@@ -108,6 +116,18 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
         });
       }
     }
+  }
+
+  Future<void> _checkBookingStatus(String propertyId) async {
+    try {
+      final bookings = await BookingService().listBookings();
+      if (mounted) {
+        final hasActive = bookings.any((b) =>
+            b.propertyId == propertyId &&
+            (b.status == 'confirmed' || b.status == 'active'));
+        setState(() => _hasActiveBooking = hasActive);
+      }
+    } catch (_) {}
   }
 
   Property? get _currentProperty => _loadedProperty ?? widget.property;
@@ -152,6 +172,76 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
       }
     } finally {
       if (mounted) setState(() => _isReserving = false);
+    }
+  }
+
+  Future<void> _startMessageAgent() async {
+    if (property.landlordId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Agent information not available')),
+        );
+      }
+      return;
+    }
+    setState(() => _isStartingChat = true);
+    try {
+      final messageService = MessageService();
+      final conversations = await messageService.listConversations();
+      String? existingConvId;
+      bool existingActive = false;
+      for (final c in conversations) {
+        if (c.participantIds != null &&
+            c.participantIds!.contains(property.landlordId) &&
+            c.conversationType == 'direct') {
+          existingConvId = c.id;
+          existingActive = c.isActive;
+          break;
+        }
+      }
+
+      if (existingConvId != null) {
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ChatDetailScreen(
+                name: property.agentName,
+                conversationId: existingConvId,
+                otherUserId: property.landlordId!,
+                otherUserRole: 'LANDLORD',
+                isActive: existingActive,
+              ),
+            ),
+          );
+        }
+      } else {
+        final conv = await messageService.createConversation(
+          participantIds: [property.landlordId!],
+        );
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ChatDetailScreen(
+                name: property.agentName,
+                conversationId: conv.id,
+                otherUserId: property.landlordId!,
+                otherUserRole: 'LANDLORD',
+                isActive: true,
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to start chat: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isStartingChat = false);
     }
   }
 
@@ -389,9 +479,40 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                 ],
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             SizedBox(
-              width: 170,
+              width: 55,
+              height: 55,
+              child: ElevatedButton(
+                onPressed: _hasActiveBooking && !_isStartingChat
+                    ? _startMessageAgent
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _hasActiveBooking ? AppColors.primary : tc.surface,
+                  foregroundColor: _hasActiveBooking ? Colors.white : tc.hint,
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.xl),
+                    side: _hasActiveBooking
+                        ? BorderSide.none
+                        : BorderSide(color: tc.border, width: 1),
+                  ),
+                ),
+                child: _isStartingChat
+                    ? const SizedBox(
+                        width: 20, height: 20,
+                        child: ApexLoading(size: 16),
+                      )
+                    : Icon(
+                        Icons.chat_bubble_outline_rounded,
+                        size: 22,
+                        color: _hasActiveBooking ? Colors.white : tc.hint,
+                      ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            SizedBox(
+              width: 155,
               height: 55,
               child: ElevatedButton(
                 onPressed: _isReserving ? null : _reserveNow,

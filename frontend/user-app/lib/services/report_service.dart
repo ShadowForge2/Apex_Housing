@@ -143,4 +143,24 @@ class ReportService {
       if (signatureData != null) 'signature_data': signatureData,
     });
   }
+
+  Future<Map<String, dynamic>> raiseDispute({
+    required String bookingId,
+    required String disputeType,
+    required String description,
+    String severity = 'medium',
+    String? title,
+    String? reportedAgainstId,
+  }) async {
+    final response = await _client.post('/reports/dispute', data: {
+      'booking_id': bookingId,
+      'dispute_type': disputeType,
+      'description': description,
+      'severity': severity,
+      if (title != null) 'title': title,
+      if (reportedAgainstId != null) 'reported_against_id': reportedAgainstId,
+    });
+    final body = response.data as Map<String, dynamic>;
+    return body;
+  }
 }

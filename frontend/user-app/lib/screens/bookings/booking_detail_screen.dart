@@ -7,6 +7,7 @@ import '../../services/booking_service.dart';
 import '../../services/escrow_service.dart';
 import '../../widgets/status_badge.dart';
 import 'rating_screen.dart';
+import 'raise_dispute_screen.dart';
 
 class BookingDetailScreen extends StatefulWidget {
   final Booking booking;
@@ -408,39 +409,80 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
         ),
       );
     }
-    return Row(
+
+    final canDispute = _booking.status == 'confirmed' || _booking.status == 'active' || _booking.status == 'pending';
+
+    return Column(
       children: [
-        Expanded(
-          child: Container(
-            height: 50,
-            decoration: BoxDecoration(
-              color: tc.surface,
-              borderRadius: BorderRadius.circular(AppRadius.pill),
-            ),
-            alignment: Alignment.center,
-            child: Text('Contact Agent', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: tc.text)),
-          ),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: GestureDetector(
-            onTap: _isCancelling ? null : _cancelBooking,
+        if (canDispute) ...[
+          GestureDetector(
+            onTap: () async {
+              final result = await Navigator.push(context, MaterialPageRoute(
+                builder: (_) => RaiseDisputeScreen(
+                  bookingId: _booking.id,
+                  propertyTitle: _booking.propertyTitle,
+                  landlordId: _booking.propertyId,
+                ),
+              ));
+              if (result == true && mounted) _fetchBooking();
+            },
             child: Container(
-              height: 50,
+              width: double.infinity,
+              height: 54,
               decoration: BoxDecoration(
-                color: _isCancelling ? AppColors.border : AppColors.error,
+                color: tc.surface,
                 borderRadius: BorderRadius.circular(AppRadius.pill),
+                border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
               ),
               alignment: Alignment.center,
-              child: _isCancelling
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: ApexLoading(size: 18),
-                    )
-                  : const Text('Cancel Booking', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.flag_rounded, size: 20, color: AppColors.error.withValues(alpha: 0.8)),
+                  const SizedBox(width: 8),
+                  Text('Raise Dispute', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.error.withValues(alpha: 0.8))),
+                ],
+              ),
             ),
           ),
+          const SizedBox(height: 12),
+        ],
+        Row(
+          children: [
+            Expanded(
+              child: Container(
+                height: 50,
+                decoration: BoxDecoration(
+                  color: tc.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
+                alignment: Alignment.center,
+                child: Text('Contact Agent', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: tc.text)),
+              ),
+            ),
+            const SizedBox(width: 14),
+            if (_booking.status != 'cancelled' && _booking.status != 'disputed')
+              Expanded(
+                child: GestureDetector(
+                  onTap: _isCancelling ? null : _cancelBooking,
+                  child: Container(
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: _isCancelling ? AppColors.border : AppColors.error,
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
+                    alignment: Alignment.center,
+                    child: _isCancelling
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: ApexLoading(size: 18),
+                          )
+                        : const Text('Cancel Booking', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
+                  ),
+                ),
+              ),
+          ],
         ),
       ],
     );

@@ -1,4 +1,6 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/theme_colors.dart';
 import '../../widgets/apex_loading.dart';
@@ -111,9 +113,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               text: 'I agree to the ',
                               style: TextStyle(fontSize: 13, color: tc.subtitle),
                               children: [
-                                TextSpan(text: 'Terms of Service', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
+                                TextSpan(
+                                  text: 'Terms of Service',
+                                  style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600),
+                                  recognizer: TapGestureRecognizer()..onTap = () => launchUrl(Uri.parse('https://www.apex-housing.online/terms'), mode: LaunchMode.externalApplication),
+                                ),
                                 TextSpan(text: ' and ', style: TextStyle(color: tc.subtitle)),
-                                TextSpan(text: 'Privacy Policy', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
+                                TextSpan(
+                                  text: 'Privacy Policy',
+                                  style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600),
+                                  recognizer: TapGestureRecognizer()..onTap = () => launchUrl(Uri.parse('https://www.apex-housing.online/privacy'), mode: LaunchMode.externalApplication),
+                                ),
                               ],
                             ),
                           ),

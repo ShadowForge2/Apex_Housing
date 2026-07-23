@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 from uuid import UUID
+from datetime import datetime, timezone
 
 from app.database import get_db
 from app.dependencies import get_admin, get_super_admin
@@ -15,7 +16,7 @@ from app.admin.schemas import (
 from app.admin.models import AdminAction, AuditLog, PlatformSetting
 from app.bookings.models import Booking
 from app.payments.models import Transaction
-from app.reports.models import BookingReport
+from app.reports.models import BookingReport, Dispute
 from app.common.response import SuccessResponse
 from app.common.exceptions import NotFound, Forbidden
 
@@ -26,6 +27,138 @@ async def dashboard(user=Depends(get_admin), db: AsyncSession = Depends(get_db))
     service = AdminService(db)
     data = await service.get_dashboard()
     return SuccessResponse(data=data)
+
+
+# ──────────────────────────────────────────────
+# Analytics
+# ──────────────────────────────────────────────
+
+@router.get("/analytics/overview", response_model=SuccessResponse)
+async def analytics_overview(user=Depends(get_admin), db: AsyncSession = Depends(get_db)):
+    from datetime import timedelta
+    from app.users.models import User as UserModel
+    from app.common.enums import UserRole
+    from app.properties.models import Property
+
+    now = datetime.now(timezone.utc)
+
+    six_months_ago = now - timedelta(days=180)
+    user_growth = []
+    for i in range(5, -1, -1):
+        month_start = (now - timedelta(days=30 * i)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        month_end = (month_start + timedelta(days=32)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        count_result = await db.execute(
+            select(func.count()).select_from(UserModel).where(
+                UserModel.created_at >= month_start,
+                UserModel.created_at < month_end,
+            )
+        )
+        user_growth.append({
+            "month": month_start.strftime("%b %Y"),
+            "value": count_result.scalar() or 0,
+        })
+
+    booking_volume = []
+    for i in range(5, -1, -1):
+        from app.bookings.models import Booking
+        month_start = (now - timedelta(days=30 * i)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        month_end = (month_start + timedelta(days=32)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        count_result = await db.execute(
+            select(func.count()).select_from(Booking).where(
+                Booking.created_at >= month_start,
+                Booking.created_at < month_end,
+            )
+        )
+        booking_volume.append({
+            "month": month_start.strftime("%b %Y"),
+            "value": count_result.scalar() or 0,
+        })
+
+    top_props_result = await db.execute(
+        select(Property).where(Property.status == "approved").limit(10)
+    )
+    top_properties = []
+    for p in top_props_result.scalars().all():
+        top_properties.append({
+            "title": p.title or "Untitled",
+            "city": getattr(p, "city", "") or "",
+            "views": getattr(p, "views_count", 0) or 0,
+            "bookings": 0,
+            "conversion_rate": 0.0,
+        })
+
+    return SuccessResponse(data={
+        "user_growth": user_growth,
+        "booking_volume": booking_volume,
+        "top_properties": top_properties,
+    })
+
+
+@router.get("/analytics/activity", response_model=SuccessResponse)
+async def analytics_activity(user=Depends(get_admin), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(AdminAction).order_by(AdminAction.created_at.desc()).limit(20)
+    )
+    actions = result.scalars().all()
+
+    from app.users.models import User as UserModel, Profile
+    admin_ids = list({a.admin_id for a in actions})
+    admin_map = {}
+    profile_map = {}
+    if admin_ids:
+        admins_result = await db.execute(select(UserModel).where(UserModel.id.in_(admin_ids)))
+        admin_map = {u.id: u for u in admins_result.scalars().all()}
+        profs_result = await db.execute(select(Profile).where(Profile.user_id.in_(admin_ids)))
+        profile_map = {p.user_id: p for p in profs_result.scalars().all()}
+
+    activities = []
+    for a in actions:
+        u = admin_map.get(a.admin_id)
+        p = profile_map.get(a.admin_id)
+        name = "Unknown"
+        if p and p.first_name:
+            name = f"{p.first_name} {p.last_name or ''}".strip()
+        elif u:
+            name = u.email.split("@")[0]
+
+        action_str = a.action.replace("_", " ").title()
+        icon = "person"
+        if "property" in a.action.lower():
+            icon = "home"
+        elif "booking" in a.action.lower() or "transaction" in a.action.lower():
+            icon = "receipt"
+
+        activities.append({
+            "type": a.action,
+            "icon": icon,
+            "message": f"{name} {action_str}",
+            "time": a.created_at.isoformat() if a.created_at else "",
+            "status": "success",
+        })
+
+    return SuccessResponse(data={"activities": activities})
+
+
+@router.get("/analytics/searches", response_model=SuccessResponse)
+async def analytics_searches(user=Depends(get_admin), db: AsyncSession = Depends(get_db)):
+    from sqlalchemy import text
+
+    try:
+        result = await db.execute(text("""
+            SELECT COALESCE(title, 'Unknown') as term, COUNT(*) as cnt
+            FROM properties
+            WHERE status = 'approved'
+            GROUP BY title
+            ORDER BY cnt DESC
+            LIMIT 10
+        """))
+        rows = result.fetchall()
+        terms = [{"term": r[0], "count": r[1], "trend": 0.0} for r in rows]
+    except Exception:
+        terms = []
+
+    return SuccessResponse(data={"terms": terms})
+
 
 @router.get("/users", response_model=SuccessResponse)
 async def list_users(page: int = 1, page_size: int = 20, role: str = None, user=Depends(get_admin), db: AsyncSession = Depends(get_db)):
@@ -64,7 +197,7 @@ async def list_pending_properties(page: int = 1, page_size: int = 20, user=Depen
     return SuccessResponse(data=properties)
 
 @router.post("/kyc/approve", response_model=SuccessResponse)
-async def approve_kyc(body: KYCApprovalRequest, user=Depends(get_admin), db: AsyncSession = Depends(get_db)):
+async def approve_kyc(body: KYCApprovalRequest, user=Depends(get_super_admin), db: AsyncSession = Depends(get_db)):
     service = AdminService(db)
     doc = await service.approve_kyc(user.id, body.document_id, body.approved, body.rejection_reason)
     return SuccessResponse(message="KYC approved" if body.approved else "KYC rejected", data={"id": str(doc.id), "status": doc.status})
@@ -113,6 +246,8 @@ async def change_user_role(body: AdminRoleChangeRequest, user=Depends(get_super_
 
 @router.get("/audit-logs", response_model=SuccessResponse)
 async def list_admin_audit_logs(page: int = 1, page_size: int = 20, admin_id: UUID = None, user=Depends(get_admin), db: AsyncSession = Depends(get_db)):
+    from app.users.models import User as UserModel, Profile
+
     query = select(AdminAction)
     if admin_id:
         query = query.where(AdminAction.admin_id == admin_id)
@@ -121,10 +256,58 @@ async def list_admin_audit_logs(page: int = 1, page_size: int = 20, admin_id: UU
     query = query.offset((page - 1) * page_size).limit(page_size).order_by(AdminAction.created_at.desc())
     result = await db.execute(query)
     logs = result.scalars().all()
-    return SuccessResponse(data={"total": total, "logs": [
-        {"id": str(l.id), "admin_id": str(l.admin_id), "action": l.action, "target_type": l.target_type, "target_id": str(l.target_id) if l.target_id else None, "details": l.details_json, "created_at": str(l.created_at)}
-        for l in logs
-    ], "page": page, "page_size": page_size})
+
+    admin_ids = list({l.admin_id for l in logs})
+    admin_map = {}
+    profile_map = {}
+    if admin_ids:
+        admins_result = await db.execute(select(UserModel).where(UserModel.id.in_(admin_ids)))
+        admin_map = {u.id: u for u in admins_result.scalars().all()}
+        profs_result = await db.execute(select(Profile).where(Profile.user_id.in_(admin_ids)))
+        profile_map = {p.user_id: p for p in profs_result.scalars().all()}
+
+    def _action_to_category(action: str) -> str:
+        a = action.lower()
+        if any(k in a for k in ["user", "suspend", "activate", "role", "invite"]):
+            return "user"
+        if any(k in a for k in ["property", "listing", "approve", "reject"]):
+            return "property"
+        if any(k in a for k in ["transaction", "payment", "escrow", "booking", "commission"]):
+            return "financial"
+        return "system"
+
+    def _target_str(log_entry) -> str:
+        t = log_entry.target_type or ""
+        details = log_entry.details_json or {}
+        email = details.get("email", "")
+        if email:
+            return f"{t}: {email}"
+        if log_entry.target_id:
+            return f"{t}: {str(log_entry.target_id)[:8]}"
+        return t
+
+    enriched = []
+    for l in logs:
+        u = admin_map.get(l.admin_id)
+        p = profile_map.get(l.admin_id)
+        admin_name = "Unknown"
+        if p and p.first_name:
+            admin_name = f"{p.first_name} {p.last_name or ''}".strip()
+        elif u:
+            admin_name = u.email.split("@")[0]
+
+        enriched.append({
+            "id": str(l.id),
+            "category": _action_to_category(l.action),
+            "admin_name": admin_name,
+            "action": l.action,
+            "target": _target_str(l),
+            "timestamp": l.created_at.isoformat() if l.created_at else "",
+            "ip_address": (l.details_json or {}).get("ip_address", ""),
+            "details": str(l.details_json) if l.details_json else None,
+        })
+
+    return SuccessResponse(data={"total": total, "logs": enriched, "page": page, "page_size": page_size})
 
 @router.get("/system-audit-logs", response_model=SuccessResponse)
 async def list_system_audit_logs(page: int = 1, page_size: int = 20, user_id: UUID = None, user=Depends(get_admin), db: AsyncSession = Depends(get_db)):
@@ -195,19 +378,65 @@ async def list_admin_bookings(page: int = 1, page_size: int = 20, status: str = 
     return SuccessResponse(data={"total": total, "bookings": enriched, "page": page, "page_size": page_size})
 
 
+class DisputeResolutionRequest(BaseModel):
+    resolution: str
+    ruling: Optional[str] = None  # "favor_tenant", "favor_landlord", "split"
+    refund_amount: Optional[float] = None
+
+
 @router.put("/bookings/{booking_id}/resolve", response_model=SuccessResponse)
-async def resolve_booking_dispute(booking_id: UUID, resolution: str = None, user=Depends(get_admin), db: AsyncSession = Depends(get_db)):
+async def resolve_booking_dispute(booking_id: UUID, body: DisputeResolutionRequest, user=Depends(get_super_admin), db: AsyncSession = Depends(get_db)):
+    from app.users.models import User as UserModel, Profile
+    from app.common.enums import BookingStatus
+    from sqlalchemy import update as sa_update
+
     result = await db.execute(select(Booking).where(Booking.id == booking_id))
     booking = result.scalar_one_or_none()
     if not booking:
         raise NotFound("Booking not found")
-    if resolution:
-        from sqlalchemy import update as sa_update
-        await db.execute(
-            sa_update(Booking).where(Booking.id == booking_id).values(notes=resolution)
+
+    if str(booking.status) not in ("DISPUTED", "disputed"):
+        raise BadRequest("This booking is not in dispute status")
+
+    await db.execute(
+        sa_update(Booking).where(Booking.id == booking_id).values(
+            notes=body.resolution,
+            status=BookingStatus.COMPLETED if body.ruling in ("favor_tenant", "favor_landlord") else BookingStatus.CANCELLED,
         )
-        await db.commit()
-    return SuccessResponse(message="Dispute resolved", data={"id": str(booking_id)})
+    )
+    await db.commit()
+
+    await AdminService(db).record_action(user.id, AdminActionRequest(
+        action="resolve_dispute",
+        target_type="booking", target_id=booking_id,
+        details={
+            "resolution": body.resolution,
+            "ruling": body.ruling,
+            "refund_amount": body.refund_amount,
+        },
+    ))
+
+    from app.notifications.service import NotificationService
+    notif_service = NotificationService(db)
+    for uid in [booking.tenant_id, booking.landlord_id]:
+        if uid:
+            try:
+                ruling_text = body.ruling or "resolved"
+                await notif_service.send_notification(
+                    user_id=uid,
+                    title="Dispute Resolved",
+                    message=f"Your dispute for booking has been resolved: {body.resolution}",
+                    reference_type="booking",
+                    reference_id=booking_id,
+                )
+            except Exception:
+                pass
+
+    return SuccessResponse(message="Dispute resolved", data={
+        "id": str(booking_id),
+        "ruling": body.ruling,
+        "resolution": body.resolution,
+    })
 
 
 @router.get("/transactions", response_model=SuccessResponse)
@@ -289,17 +518,39 @@ async def get_transaction_detail(transaction_id: UUID, user=Depends(get_admin), 
 
 @router.get("/reports", response_model=SuccessResponse)
 async def list_admin_reports(page: int = 1, page_size: int = 20, status: str = None, user=Depends(get_admin), db: AsyncSession = Depends(get_db)):
-    query = select(BookingReport)
-    if status:
-        query = query.where(BookingReport.is_finalized == (status == "finalized"))
-    count_result = await db.execute(select(func.count()).select_from(query.subquery()))
-    total = count_result.scalar()
-    query = query.order_by(BookingReport.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
-    result = await db.execute(query)
-    reports = result.scalars().all()
-
     enriched = []
-    for r in reports:
+
+    # Fetch disputes
+    dispute_query = select(Dispute)
+    if status:
+        dispute_query = dispute_query.where(Dispute.status == status)
+    dispute_result = await db.execute(dispute_query.order_by(Dispute.created_at.desc()))
+    disputes = dispute_result.scalars().all()
+    for d in disputes:
+        enriched.append({
+            "id": str(d.id),
+            "type": d.dispute_type or "other",
+            "severity": d.severity or "medium",
+            "status": d.status or "open",
+            "reported_by": d.reported_by_name or "Unknown",
+            "reported_against": d.reported_against_name or "Unknown",
+            "description": d.description or "",
+            "date": d.created_at.strftime("%Y-%m-%d") if d.created_at else "",
+            "assigned_to": d.assigned_to,
+            "source": "dispute",
+            "booking_reference": d.booking_reference,
+            "property_title": d.property_title,
+        })
+
+    # Fetch booking reports
+    br_query = select(BookingReport)
+    if status == "finalized":
+        br_query = br_query.where(BookingReport.is_finalized == True)
+    elif status and status != "finalized":
+        br_query = br_query.where(BookingReport.is_finalized == False)
+    br_result = await db.execute(br_query.order_by(BookingReport.created_at.desc()))
+    booking_reports = br_result.scalars().all()
+    for r in booking_reports:
         enriched.append({
             "id": str(r.id),
             "type": "property_issue",
@@ -310,12 +561,44 @@ async def list_admin_reports(page: int = 1, page_size: int = 20, status: str = N
             "description": f"Report {r.report_number} for booking {r.booking_reference}",
             "date": r.created_at.strftime("%Y-%m-%d") if r.created_at else "",
             "assigned_to": None,
+            "source": "booking_report",
+            "booking_reference": r.booking_reference,
+            "property_title": r.property_title,
         })
 
-    return SuccessResponse(data={"total": total, "reports": enriched, "page": page, "page_size": page_size})
+    enriched.sort(key=lambda x: x.get("date", ""), reverse=True)
+    total = len(enriched)
+    start = (page - 1) * page_size
+    paginated = enriched[start:start + page_size]
+
+    return SuccessResponse(data={"total": total, "reports": paginated, "page": page, "page_size": page_size})
 
 @router.put("/reports/{report_id}", response_model=SuccessResponse)
-async def update_admin_report(report_id: UUID, status: str = None, user=Depends(get_admin), db: AsyncSession = Depends(get_db)):
+async def update_admin_report(report_id: UUID, status: str = None, assigned_to: str = None, resolution_notes: str = None, user=Depends(get_admin), db: AsyncSession = Depends(get_db)):
+    # Try dispute first
+    result = await db.execute(select(Dispute).where(Dispute.id == report_id))
+    dispute = result.scalar_one_or_none()
+    if dispute:
+        if status is not None:
+            dispute.status = status
+            if status == "resolved":
+                dispute.resolved_at = datetime.now(timezone.utc)
+        if assigned_to is not None:
+            dispute.assigned_to = assigned_to
+            if dispute.status == "open":
+                dispute.status = "investigating"
+        if resolution_notes is not None:
+            dispute.resolution_notes = resolution_notes
+        await db.commit()
+        await db.refresh(dispute)
+        return SuccessResponse(message="Dispute updated", data={
+            "id": str(dispute.id),
+            "status": dispute.status,
+            "assigned_to": dispute.assigned_to,
+            "resolution_notes": dispute.resolution_notes,
+        })
+
+    # Try booking report
     result = await db.execute(select(BookingReport).where(BookingReport.id == report_id))
     report = result.scalar_one_or_none()
     if not report:
@@ -361,7 +644,7 @@ async def _get_all_settings(db: AsyncSession) -> dict:
 
 
 @router.get("/settings", response_model=SuccessResponse)
-async def get_platform_settings(user=Depends(get_admin), db: AsyncSession = Depends(get_db)):
+async def get_platform_settings(user=Depends(get_super_admin), db: AsyncSession = Depends(get_db)):
     settings = await _get_all_settings(db)
     return SuccessResponse(data={
         "auto_approve_listings": settings["auto_approve_listings"] == "true",
@@ -638,24 +921,29 @@ async def send_group_chat_message(
     await db.refresh(message)
 
     sender_name = user.email.split("@")[0]
-    profile_result = await db.execute(
-        select(Profile).where(Profile.user_id == user.id)
-    )
-    profile = profile_result.scalar_one_or_none()
-    if profile and profile.first_name:
-        sender_name = f"{profile.first_name} {profile.last_name}"
 
-    notif_service = NotificationService(db)
-    for rid in recipient_ids:
-        await notif_service.send_notification(
-            user_id=rid,
-            title=f"Admin Chat: {sender_name}",
-            message=body.content[:200],
-            reference_type="admin_group_chat",
-            reference_id=conv.id,
-            data={"conversation_id": str(conv.id), "sender_id": str(user.id)},
-            push_data={"conversation_id": str(conv.id), "type": "admin_group_chat"},
+    # Use fresh session for post-commit reads
+    from app.database import async_session
+    async with async_session() as post_db:
+        profile_result = await post_db.execute(
+            select(Profile).where(Profile.user_id == user.id)
         )
+        profile = profile_result.scalar_one_or_none()
+        if profile and profile.first_name:
+            sender_name = f"{profile.first_name} {profile.last_name}"
+
+        notif_service = NotificationService(post_db)
+        for rid in recipient_ids:
+            await notif_service.send_notification(
+                user_id=rid,
+                title=f"Admin Chat: {sender_name}",
+                message=body.content[:200],
+                reference_type="admin_group_chat",
+                reference_id=conv.id,
+                data={"conversation_id": str(conv.id), "sender_id": str(user.id)},
+                push_data={"conversation_id": str(conv.id), "type": "admin_group_chat"},
+            )
+        await post_db.commit()
 
     return SuccessResponse(message="Message sent", data={
         "id": str(message.id),

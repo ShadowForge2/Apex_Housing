@@ -46,3 +46,12 @@ class ReportDownloadResponse(BaseModel):
     html_content: str
     is_finalized: bool
     download_count: int
+
+
+class DisputeCreateRequest(BaseModel):
+    booking_id: UUID
+    dispute_type: str
+    severity: str = "medium"
+    title: Optional[str] = None
+    description: str
+    reported_against_id: Optional[UUID] = None

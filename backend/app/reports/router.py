@@ -1,11 +1,16 @@
 from fastapi import APIRouter, Depends, Request
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from uuid import UUID
 
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.reports.service import BookingReportService
-from app.reports.schemas import BookingReportResponse, BookingReportListResponse, ReportSignRequest
+from app.reports.schemas import BookingReportResponse, BookingReportListResponse, ReportSignRequest, DisputeCreateRequest
+from app.reports.models import Dispute
+from app.bookings.models import Booking
+from app.properties.models import Property
 from app.users.models import User
 from app.common.response import SuccessResponse
 
@@ -36,6 +41,80 @@ async def list_reports(
     service = BookingReportService(db)
     result = await service.list_reports(user.id, page=page, page_size=page_size)
     return SuccessResponse(data=result)
+
+
+@router.post("/dispute", response_model=SuccessResponse)
+async def raise_dispute(
+    body: DisputeCreateRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    valid_types = ['harassment', 'noise', 'property_damage', 'safety', 'discrimination', 'other']
+    if body.dispute_type not in valid_types:
+        return JSONResponse(status_code=400, content={"detail": f"Invalid dispute type. Must be one of: {', '.join(valid_types)}"})
+
+    valid_severities = ['low', 'medium', 'high']
+    if body.severity not in valid_severities:
+        return JSONResponse(status_code=400, content={"detail": f"Invalid severity. Must be one of: {', '.join(valid_severities)}"})
+
+    booking_result = await db.execute(select(Booking).where(Booking.id == body.booking_id))
+    booking = booking_result.scalar_one_or_none()
+    if not booking:
+        return JSONResponse(status_code=404, content={"detail": "Booking not found"})
+
+    if str(booking.tenant_id) != str(user.id):
+        return JSONResponse(status_code=403, content={"detail": "You can only raise disputes for your own bookings"})
+
+    property_title = None
+    if booking.property_id:
+        prop_result = await db.execute(select(Property).where(Property.id == booking.property_id))
+        prop = prop_result.scalar_one_or_none()
+        if prop:
+            property_title = prop.title
+
+    reported_against_name = None
+    if body.reported_against_id:
+        against_result = await db.execute(select(User).where(User.id == body.reported_against_id))
+        against_user = against_result.scalar_one_or_none()
+        if against_user:
+            reported_against_name = against_user.name or against_user.email
+
+    user_result = await db.execute(select(User).where(User.id == user.id))
+    current_user = user_result.scalar_one_or_none()
+    reported_by_name = current_user.name or current_user.email if current_user else "Unknown"
+
+    dispute = Dispute(
+        booking_id=body.booking_id,
+        property_id=booking.property_id,
+        reported_by_id=user.id,
+        reported_against_id=body.reported_against_id,
+        dispute_type=body.dispute_type,
+        severity=body.severity,
+        status="open",
+        title=body.title,
+        description=body.description,
+        reported_by_name=reported_by_name,
+        reported_against_name=reported_against_name,
+        property_title=property_title,
+        booking_reference=booking.reference,
+    )
+    db.add(dispute)
+
+    # Mark booking as disputed
+    booking.status = "disputed"
+    await db.commit()
+    await db.refresh(dispute)
+
+    return JSONResponse(status_code=200, content={
+        "message": "Dispute raised successfully. Our team will review it shortly.",
+        "data": {
+            "id": str(dispute.id),
+            "status": dispute.status,
+            "dispute_type": dispute.dispute_type,
+            "severity": dispute.severity,
+            "created_at": dispute.created_at.isoformat() if dispute.created_at else None,
+        },
+    })
 
 
 @router.get("/{report_id}", response_model=SuccessResponse)

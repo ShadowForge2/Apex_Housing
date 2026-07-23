@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -10,12 +11,38 @@ class AppLocationService {
   Position? _cachedPosition;
   Position? get currentPosition => _cachedPosition;
 
-  Future<bool> checkAndRequestPermission() async {
+  Future<bool> checkAndRequestPermission({BuildContext? context}) async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) return false;
 
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
+      if (context != null && context.mounted) {
+        final proceed = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Row(children: [
+              Icon(Icons.location_on_outlined, color: AppColors.primary, size: 22),
+              SizedBox(width: 10),
+              Text('Location Access', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            ]),
+            content: const Text(
+              'APEX Housing needs your location to show nearby properties and improve your search results.',
+              style: TextStyle(fontSize: 14),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Not Now')),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Allow', style: TextStyle(fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+        );
+        if (proceed != true) return false;
+      }
+
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) return false;
     }
@@ -33,8 +60,8 @@ class AppLocationService {
     return true;
   }
 
-  Future<Position?> getCurrentLocation() async {
-    final hasPermission = await checkAndRequestPermission();
+  Future<Position?> getCurrentLocation({BuildContext? context}) async {
+    final hasPermission = await checkAndRequestPermission(context: context);
     if (!hasPermission) return null;
 
     try {

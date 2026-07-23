@@ -6,7 +6,7 @@ from sqlalchemy import DateTime, ForeignKey, String, Text, JSON, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.common.base_model import BaseModelCreatedAtMixin
+from app.common.base_model import BaseModelMixin, BaseModelCreatedAtMixin
 from app.database import Base
 
 
@@ -126,3 +126,49 @@ class BookingReport(BaseModelCreatedAtMixin, Base):
 
     # Relationships
     booking: Mapped["Booking"] = relationship("Booking", foreign_keys=[booking_id])
+
+
+class Dispute(BaseModelMixin, Base):
+    __tablename__ = "disputes"
+
+    booking_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("bookings.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    property_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("properties.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    reported_by_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    reported_against_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    dispute_type: Mapped[str] = mapped_column(
+        String(50), nullable=False,
+        comment="harassment, noise, property_damage, safety, discrimination, other"
+    )
+    severity: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default="medium",
+        comment="low, medium, high"
+    )
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default="open",
+        comment="open, investigating, resolved"
+    )
+    title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    reported_by_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    reported_against_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    property_title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    booking_reference: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    assigned_to: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    resolution_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    resolved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)

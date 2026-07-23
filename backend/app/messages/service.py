@@ -265,6 +265,20 @@ class MessageService:
             push_data={"conversation_id": str(conversation.id), "type": "complaint"},
         )
 
+        for other_admin in all_admins:
+            if other_admin.id != admin.id:
+                try:
+                    await notif_service.send_notification(
+                        user_id=other_admin.id,
+                        title="New Complaint Filed",
+                        message=f"A new complaint has been filed: {data.reason}",
+                        reference_type="complaint",
+                        reference_id=conversation.id,
+                        data={"conversation_id": str(conversation.id), "booking_id": str(data.booking_id)},
+                    )
+                except Exception:
+                    pass
+
         return conversation
 
     async def get_conversations(self, user_id: UUID, page: int = 1, page_size: int = 20) -> dict:

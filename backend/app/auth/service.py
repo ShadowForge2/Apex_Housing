@@ -3,6 +3,9 @@ from typing import Optional
 from uuid import uuid4, UUID
 import secrets
 import hashlib
+import logging
+
+logger = logging.getLogger(__name__)
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -335,10 +338,9 @@ class AuthService:
             raise BadRequest("This email is not registered as an admin.")
         if user.is_verified:
             raise Conflict("Account already activated. Please login.")
-        if not user.is_active:
-            raise Unauthorized("Account is deactivated. Contact the super admin.")
 
         user.password_hash = hash_password(password)
+        user.is_active = True
         await self.db.commit()
 
         otp = generate_otp()
@@ -353,6 +355,33 @@ class AuthService:
         self.db.add(otp_record)
         await self.db.commit()
         await email_service.send_otp(to=email, otp=otp, purpose="verification")
+
+        try:
+            from app.messages.models import Conversation, ConversationParticipant
+            from app.common.enums import UserRole as UR
+            from uuid import uuid4 as _uuid
+            from sqlalchemy import select as sa_select
+
+            conv_result = await self.db.execute(
+                sa_select(Conversation).where(Conversation.conversation_type == "admin_group")
+            )
+            conv = conv_result.scalar_one_or_none()
+            if conv:
+                existing = await self.db.execute(
+                    sa_select(ConversationParticipant).where(
+                        ConversationParticipant.conversation_id == conv.id,
+                        ConversationParticipant.user_id == user.id,
+                    )
+                )
+                if not existing.scalar_one_or_none():
+                    participant = ConversationParticipant(
+                        id=_uuid(), conversation_id=conv.id,
+                        user_id=user.id, unread_count=0,
+                    )
+                    self.db.add(participant)
+                    await self.db.commit()
+        except Exception as e:
+            logger.error(f"Failed to add admin {user.id} to group chat: {e}")
 
         access_token = create_access_token(user.id, user.role)
         refresh_token = create_refresh_token(user.id)

@@ -51,7 +51,8 @@ async def list_conversations(page: int = 1, page_size: int = 20, user: User = De
 
 @router.post("/messages", response_model=SuccessResponse)
 async def send_message(body: MessageCreate, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    if not user.is_verified:
+    from app.common.enums import UserRole
+    if user.role != UserRole.ADMIN and not user.is_verified:
         raise HTTPException(status_code=403, detail="Identity verification required to send messages. Please complete KYC first.")
     service = MessageService(db)
     msg = await service.send_message(user.id, body)

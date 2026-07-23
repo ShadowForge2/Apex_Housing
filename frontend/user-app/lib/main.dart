@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'theme/app_colors.dart';
 import 'theme/theme_provider.dart';
 import 'theme/text_scale_provider.dart';
@@ -50,7 +51,19 @@ void main() async {
     _localeService.init(),
   ]);
 
+  // Request notification permission (non-blocking)
+  _requestNotificationPermission();
+
   runApp(const ApexHousingApp());
+}
+
+void _requestNotificationPermission() async {
+  try {
+    final permission = await Permission.notification.status;
+    if (permission.isDenied || permission.isPermanentlyDenied) {
+      await Permission.notification.request();
+    }
+  } catch (_) {}
 }
 
 class ApexHousingApp extends StatefulWidget {

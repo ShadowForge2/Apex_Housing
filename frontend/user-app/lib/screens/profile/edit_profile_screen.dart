@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/apex_loading.dart';
 import '../../theme/theme_colors.dart';
@@ -7,6 +8,7 @@ import '../../widgets/app_button.dart';
 import '../../widgets/loading_overlay.dart';
 import '../../services/user_service.dart';
 import '../../services/token_storage.dart';
+import '../../services/permission_helper.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -195,6 +197,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 tc: tc,
                 onTap: () async {
                   Navigator.pop(context);
+                  final hasPermission = await PermissionHelper.showRationaleAndRequest(
+                    context,
+                    permission: Permission.photos,
+                    title: 'Gallery Access',
+                    explanation: 'APEX Housing needs gallery access to upload a profile photo from your device.',
+                    icon: Icons.photo_library_outlined,
+                  );
+                  if (!hasPermission) {
+                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Gallery permission required to change profile photo')),
+                    );
+                    return;
+                  }
                   final picked = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
                   if (picked != null) await _uploadPicture(picked.path);
                 },
@@ -207,6 +222,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 tc: tc,
                 onTap: () async {
                   Navigator.pop(context);
+                  final hasPermission = await PermissionHelper.showRationaleAndRequest(
+                    context,
+                    permission: Permission.camera,
+                    title: 'Camera Access',
+                    explanation: 'APEX Housing needs camera access to take a profile photo.',
+                    icon: Icons.camera_alt_outlined,
+                  );
+                  if (!hasPermission) {
+                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Camera permission required to take a profile photo')),
+                    );
+                    return;
+                  }
                   final picked = await _picker.pickImage(source: ImageSource.camera, imageQuality: 80);
                   if (picked != null) await _uploadPicture(picked.path);
                 },

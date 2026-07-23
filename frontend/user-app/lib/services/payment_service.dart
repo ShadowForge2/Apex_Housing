@@ -123,7 +123,7 @@ class PaymentService {
     if (data is Map && data['data'] is Map) {
       return Map<String, dynamic>.from(data['data']);
     }
-    return {'verified': false};
+    return {'verified': false, 'error': 'Unexpected response'};
   }
 
   Future<Map<String, dynamic>> addBankAccount({

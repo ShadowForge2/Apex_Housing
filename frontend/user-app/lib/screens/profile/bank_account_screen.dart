@@ -90,11 +90,12 @@ class _BankAccountScreenState extends State<BankAccountScreen> {
           _isVerifying = false;
         });
       } else {
+        final errMsg = result['error'] as String? ?? 'Could not resolve account name. Please check your bank and account number.';
         setState(() {
           _verified = false;
           _resolvedAccountName = null;
           _isVerifying = false;
-          _error = 'Could not resolve account name. Please check your bank and account number.';
+          _error = errMsg;
         });
       }
     } catch (e) {

@@ -109,9 +109,9 @@ class SignatureModel {
   factory SignatureModel.fromJson(Map<String, dynamic> json) {
     return SignatureModel(
       id: json['id']?.toString() ?? '',
-      data: json['data']?.toString(),
+      data: json['signature_data']?.toString() ?? json['data']?.toString(),
       label: json['label']?.toString(),
-      createdAt: json['created_at']?.toString(),
+      createdAt: json['signature_created_at']?.toString() ?? json['created_at']?.toString(),
     );
   }
 }

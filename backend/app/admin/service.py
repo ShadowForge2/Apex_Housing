@@ -445,7 +445,7 @@ class AdminService:
             id=uuid4(), email=email,
             password_hash=hash_password(uuid4().hex),
             role=UserRole.ADMIN, is_super_admin=False,
-            is_active=True, is_verified=False,
+            is_active=False, is_verified=False,
         )
         self.db.add(user)
 
@@ -466,12 +466,14 @@ class AdminService:
             inviter_name = "Super Admin"
             if inviter:
                 profile_result = await self.db.execute(select(Profile).where(Profile.user_id == inviter.id))
-                profile = profile_result.scalar_one_or_none()
-                if profile and profile.first_name:
-                    inviter_name = f"{profile.first_name} {profile.last_name or ''}".strip()
-            await email_service.send_admin_invite(email, invited_by=inviter_name)
-        except Exception:
-            pass
+                inviter_profile = profile_result.scalar_one_or_none()
+                if inviter_profile and inviter_profile.first_name:
+                    inviter_name = f"{inviter_profile.first_name} {inviter_profile.last_name or ''}".strip()
+            email_sent = await email_service.send_admin_invite(email, invited_by=inviter_name)
+            if not email_sent:
+                logger.warning(f"Admin invite email failed to send to {email}")
+        except Exception as e:
+            logger.error(f"Admin invite email error for {email}: {e}")
 
         return {"id": str(user.id), "email": email, "role": "ADMIN"}
 

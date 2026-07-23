@@ -265,9 +265,10 @@ class AdminService {
     return _parseResponse(response);
   }
 
-  Future<Map<String, dynamic>> resolveDispute(String bookingId, String resolution) async {
+  Future<Map<String, dynamic>> resolveDispute(String bookingId, String resolution, {String? ruling}) async {
     final response = await _client.put('/admin/bookings/$bookingId/resolve', data: {
       'resolution': resolution,
+      'ruling': ruling,
     });
     return _parseResponse(response);
   }

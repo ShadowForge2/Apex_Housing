@@ -48,6 +48,27 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
   }
 
   Future<void> _pickDocument(bool isFront) async {
+    final proceed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(children: [
+          Icon(Icons.badge_outlined, color: AppColors.primary, size: 22),
+          SizedBox(width: 10),
+          Text('ID Document Required', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+        ]),
+        content: const Text(
+          'APEX Housing needs access to your gallery to upload a photo of your government-issued ID for identity verification. This is a one-time process.',
+          style: TextStyle(fontSize: 14),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Continue', style: TextStyle(fontWeight: FontWeight.w600))),
+        ],
+      ),
+    );
+    if (proceed != true) return;
+
     final picked = await _picker.pickImage(source: ImageSource.gallery);
     if (picked != null) {
       setState(() => _documentFile = File(picked.path));
@@ -55,6 +76,27 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
   }
 
   Future<void> _pickSelfie() async {
+    final proceed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(children: [
+          Icon(Icons.camera_alt_outlined, color: AppColors.primary, size: 22),
+          SizedBox(width: 10),
+          Text('Selfie Verification', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+        ]),
+        content: const Text(
+          'APEX Housing needs camera access to take a selfie for liveness verification. Your selfie is compared with your ID photo to confirm your identity.',
+          style: TextStyle(fontSize: 14),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Continue', style: TextStyle(fontWeight: FontWeight.w600))),
+        ],
+      ),
+    );
+    if (proceed != true) return;
+
     final picked = await _picker.pickImage(source: ImageSource.camera, preferredCameraDevice: CameraDevice.front);
     if (picked != null) {
       setState(() => _selfieFile = File(picked.path));

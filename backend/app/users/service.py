@@ -140,6 +140,7 @@ class UserService:
             if not existing.scalar_one_or_none():
                 self.db.add(Tenant(user_id=user_id))
 
+        await self.db.commit()
         return {"message": f"Role switched from {old_role.value} to {new_role.value}", "role": new_role.value}
 
     async def submit_kyc(self, user_id: UUID, document_type: str, document_url: str, selfie_url: str = None, needs_review: bool = False) -> dict:

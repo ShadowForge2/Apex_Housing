@@ -26,6 +26,18 @@ from app.common.exceptions import NotFound, Forbidden, BadRequest
 router = APIRouter(prefix="/admin", tags=["Admin"])
 logger = logging.getLogger(__name__)
 
+
+async def _get_admin_group_conversation(db: AsyncSession):
+    from app.messages.models import Conversation
+
+    result = await db.execute(
+        select(Conversation)
+        .where(Conversation.conversation_type == "admin_group")
+        .order_by(Conversation.created_at.asc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
 @router.get("/dashboard", response_model=SuccessResponse)
 async def dashboard(user=Depends(get_admin), db: AsyncSession = Depends(get_db)):
     service = AdminService(db)
@@ -813,12 +825,7 @@ async def get_or_create_admin_group_chat(
     from app.common.enums import UserRole
     from uuid import uuid4 as _uuid
 
-    result = await db.execute(
-        select(Conversation).where(
-            Conversation.conversation_type == "admin_group",
-        )
-    )
-    conv = result.scalar_one_or_none()
+    conv = await _get_admin_group_conversation(db)
 
     if not conv:
         conv = Conversation(id=_uuid(), conversation_type="admin_group")
@@ -933,12 +940,7 @@ async def send_group_chat_message(
     if not content:
         raise BadRequest("Message content cannot be empty")
 
-    result = await db.execute(
-        select(Conversation).where(
-            Conversation.conversation_type == "admin_group",
-        )
-    )
-    conv = result.scalar_one_or_none()
+    conv = await _get_admin_group_conversation(db)
     if not conv:
         raise NotFound("Admin group chat not found")
 
@@ -1005,12 +1007,7 @@ async def get_group_chat_messages(
     from app.users.models import User, Profile
     from uuid import uuid4 as _uuid
 
-    result = await db.execute(
-        select(Conversation).where(
-            Conversation.conversation_type == "admin_group",
-        )
-    )
-    conv = result.scalar_one_or_none()
+    conv = await _get_admin_group_conversation(db)
     if not conv:
         raise NotFound("Admin group chat not found")
 
@@ -1033,8 +1030,6 @@ async def get_group_chat_messages(
         Message.is_deleted == False,
     ).order_by(Message.created_at.desc())
 
-    count_result = await db.execute(select(func.count()).select_from(query.subquery()))
-    total = count_result.scalar()
     query = query.offset((page - 1) * page_size).limit(page_size)
     result = await db.execute(query)
     messages = result.scalars().all()
@@ -1065,7 +1060,7 @@ async def get_group_chat_messages(
             "created_at": m.created_at.isoformat() if m.created_at else None,
         })
 
-    return SuccessResponse(data={"total": total, "messages": enriched})
+    return SuccessResponse(data={"total": len(enriched), "messages": enriched})
 
 
 class GroupMemberManage(BaseModel):
@@ -1083,12 +1078,7 @@ async def add_group_chat_member(
     from app.common.enums import UserRole
     from uuid import uuid4 as _uuid
 
-    result = await db.execute(
-        select(Conversation).where(
-            Conversation.conversation_type == "admin_group",
-        )
-    )
-    conv = result.scalar_one_or_none()
+    conv = await _get_admin_group_conversation(db)
     if not conv:
         raise NotFound("Admin group chat not found")
 
@@ -1125,12 +1115,7 @@ async def remove_group_chat_member(
     from app.messages.models import Conversation, ConversationParticipant
     from datetime import datetime, timezone
 
-    result = await db.execute(
-        select(Conversation).where(
-            Conversation.conversation_type == "admin_group",
-        )
-    )
-    conv = result.scalar_one_or_none()
+    conv = await _get_admin_group_conversation(db)
     if not conv:
         raise NotFound("Admin group chat not found")
 

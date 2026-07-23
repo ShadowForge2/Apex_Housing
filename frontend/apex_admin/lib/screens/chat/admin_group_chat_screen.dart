@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../services/admin_service.dart';
@@ -26,6 +27,7 @@ class _AdminGroupChatScreenState extends State<AdminGroupChatScreen> {
   List<Map<String, dynamic>> _messages = [];
   bool _isLoading = true;
   bool _isSending = false;
+  bool _isRefreshing = false;
   String _conversationId = '';
   String _currentUserId = '';
   Timer? _pollTimer;
@@ -34,7 +36,7 @@ class _AdminGroupChatScreenState extends State<AdminGroupChatScreen> {
   void initState() {
     super.initState();
     _loadData();
-    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) => _refreshMessages());
+    _pollTimer = Timer.periodic(const Duration(seconds: 10), (_) => _refreshMessages());
   }
 
   @override
@@ -78,7 +80,8 @@ class _AdminGroupChatScreenState extends State<AdminGroupChatScreen> {
   }
 
   Future<void> _refreshMessages() async {
-    if (_conversationId.isEmpty) return;
+    if (_conversationId.isEmpty || _isRefreshing || _isSending) return;
+    _isRefreshing = true;
     try {
       final result = await _adminService.getAdminGroupChatMessages();
       final data = result['data'] as Map<String, dynamic>?;
@@ -88,7 +91,10 @@ class _AdminGroupChatScreenState extends State<AdminGroupChatScreen> {
           setState(() => _messages = msgs.reversed.toList());
         }
       }
-    } catch (_) {}
+    } catch (_) {
+    } finally {
+      _isRefreshing = false;
+    }
   }
 
   void _scrollToBottom() {

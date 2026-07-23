@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:dio/dio.dart';
 import 'api_client.dart';
 import '../models/models.dart';
 
@@ -483,7 +485,7 @@ class PropertyService {
     return [];
   }
 
-  Future<PropertyModel> createProperty({
+  Future<Map<String, dynamic>> createProperty({
     required String title,
     String? description,
     String? propertyType,
@@ -494,38 +496,56 @@ class PropertyService {
     double? longitude,
     double? rentAmount,
     double? securityDeposit,
-    double? serviceFee,
     String? agentTerms,
     List<String>? amenityIds,
   }) async {
     final responseData = <String, dynamic>{
       'title': title,
-    };
-    if (description != null) responseData['description'] = description;
-    if (propertyType != null) responseData['property_type'] = propertyType;
-    if (agentTerms != null) responseData['agent_terms'] = agentTerms;
-    if (address != null || city != null || state != null) {
-      responseData['location'] = {
-        if (address != null) 'address': address,
-        if (city != null) 'city': city,
-        if (state != null) 'state': state,
+      'property_type': propertyType ?? 'apartment',
+      'description': description ?? '',
+      'location': {
+        'address': address ?? '',
+        'city': city ?? '',
+        'state': state ?? '',
         if (latitude != null) 'latitude': latitude,
         if (longitude != null) 'longitude': longitude,
-      };
-    }
-    if (rentAmount != null || securityDeposit != null || serviceFee != null) {
-      responseData['pricing'] = {
-        if (rentAmount != null) 'rent_amount': rentAmount,
-        if (securityDeposit != null) 'security_deposit': securityDeposit,
-        if (serviceFee != null) 'service_fee': serviceFee,
-      };
-    }
+      },
+      'pricing': {
+        'rent_amount': rentAmount ?? 0,
+        'security_deposit': securityDeposit ?? 0,
+        'service_fee': 0,
+      },
+    };
+    if (agentTerms != null) responseData['agent_terms'] = agentTerms;
     if (amenityIds != null) responseData['amenity_ids'] = amenityIds;
 
     final response = await _client.post('/properties/', data: responseData);
     final body = response.data as Map<String, dynamic>;
-    final data = body['data'] as Map<String, dynamic>;
-    return PropertyModel.fromJson(data);
+    return body['data'] as Map<String, dynamic>;
+  }
+
+  Future<void> uploadPropertyImage(String propertyId, {required String filePath, required String label, int sortOrder = 0}) async {
+    final file = File(filePath);
+    final fileName = filePath.split(Platform.pathSeparator).last;
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(filePath, filename: fileName),
+    });
+    await _client.dio.post(
+      '/properties/$propertyId/images',
+      data: formData,
+      queryParameters: {'label': label, 'sort_order': sortOrder},
+    );
+  }
+
+  Future<void> uploadPropertyVideo(String propertyId, {required String filePath}) async {
+    final fileName = filePath.split(Platform.pathSeparator).last;
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(filePath, filename: fileName),
+    });
+    await _client.dio.post(
+      '/properties/$propertyId/videos',
+      data: formData,
+    );
   }
 
   Future<PropertyModel> updateProperty(

@@ -43,6 +43,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
   AdminRole _inviteRole = AdminRole.admin;
   AdminRole _changeRoleTarget = AdminRole.admin;
   bool _isLoading = true;
+  String? _loadError;
 
   final List<AdminTeamMember> _admins = [];
 
@@ -53,6 +54,12 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
   }
 
   Future<void> _fetchAdmins() async {
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _loadError = null;
+      });
+    }
     try {
       final response = await AdminService().listAdmins();
       final data = response['data'];
@@ -61,7 +68,11 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
         setState(() {
           _admins.clear();
           for (final a in adminsList) {
-            final name = a['name'] as String? ?? '${a['first_name'] ?? ''} ${a['last_name'] ?? ''}'.trim();
+            final email = (a['email'] as String? ?? '').trim();
+            final profileName = '${a['first_name'] ?? ''} ${a['last_name'] ?? ''}'.trim();
+            final name = profileName.isNotEmpty
+                ? profileName
+                : (email.isNotEmpty ? email.split('@').first : 'Admin');
             final avatarParts = name.split(' ');
             final avatar = avatarParts.length >= 2
                 ? '${avatarParts[0][0]}${avatarParts[1][0]}'
@@ -71,7 +82,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
 
             _admins.add(AdminTeamMember(
               name: name,
-              email: a['email'] as String? ?? '',
+              email: email,
               id: a['id'] as String? ?? '',
               role: isSuper ? AdminRole.superAdmin : _parseAdminRole(a['role'] as String? ?? 'admin'),
               status: (a['is_active'] == true)
@@ -82,26 +93,19 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
           }
           _isLoading = false;
         });
-      } else {
-        if (mounted) {
-          setState(() {
-            _admins.addAll([
-              const AdminTeamMember(name: 'Adaeze Okonkwo', email: 'adaeze.okonkwo@apex.ng', id: 'ADM-001', role: AdminRole.superAdmin, status: AdminTeamStatus.active, avatar: 'AO'),
-              const AdminTeamMember(name: 'Chukwuemeka Nwosu', email: 'chukwuemeka.n@apex.ng', id: 'ADM-002', role: AdminRole.admin, status: AdminTeamStatus.active, avatar: 'CN'),
-              const AdminTeamMember(name: 'Folake Adeyemi', email: 'folake.adeyemi@apex.ng', id: 'ADM-003', role: AdminRole.admin, status: AdminTeamStatus.suspended, avatar: 'FA'),
-            ]);
-            _isLoading = false;
-          });
-        }
+      } else if (mounted) {
+        setState(() {
+          _admins.clear();
+          _isLoading = false;
+          _loadError = 'Unable to load the admin team.';
+        });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _admins.addAll([
-            const AdminTeamMember(name: 'Adaeze Okonkwo', email: 'adaeze.okonkwo@apex.ng', id: 'ADM-001', role: AdminRole.superAdmin, status: AdminTeamStatus.active, avatar: 'AO'),
-            const AdminTeamMember(name: 'Chukwuemeka Nwosu', email: 'chukwuemeka.n@apex.ng', id: 'ADM-002', role: AdminRole.admin, status: AdminTeamStatus.active, avatar: 'CN'),
-          ]);
+          _admins.clear();
           _isLoading = false;
+          _loadError = e is ApiException ? e.message : 'Unable to load the admin team.';
         });
       }
     }
@@ -364,6 +368,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
   }
 
   Widget _buildEmptyState() {
+    final hasLoadError = _loadError != null;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -378,8 +383,8 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
             child: const Icon(Icons.admin_panel_settings_outlined, size: 32, color: AppColors.hint),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'No admins found',
+          Text(
+            hasLoadError ? 'Unable to load admins' : 'No admins found',
             style: TextStyle(
               fontSize: 15,
               color: AppColors.subtitle,
@@ -387,10 +392,16 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
-            'Try adjusting your search or invite a new admin',
-            style: TextStyle(fontSize: 13, color: AppColors.hint),
+          Text(
+            hasLoadError
+                ? _loadError!
+                : 'Try adjusting your search or invite a new admin',
+            style: const TextStyle(fontSize: 13, color: AppColors.hint),
           ),
+          if (hasLoadError) ...[
+            const SizedBox(height: 12),
+            TextButton(onPressed: _fetchAdmins, child: const Text('Try again')),
+          ],
         ],
       ),
     );

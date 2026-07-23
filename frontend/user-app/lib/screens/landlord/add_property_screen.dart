@@ -10,7 +10,6 @@ import '../../widgets/app_button.dart';
 import '../../services/property_service.dart';
 import '../../services/amenity_service.dart';
 import '../../services/app_state_restoration.dart';
-import '../../services/storage_service.dart';
 import '../../services/permission_helper.dart';
 
 class AddPropertyScreen extends StatefulWidget {
@@ -443,20 +442,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with AppStateRest
           .map((a) => a.id)
           .toList();
 
-      List<Map<String, String>> imageData = [];
-      for (final entry in _imageSlots.entries) {
-        if (entry.value != null) {
-          final url = await StorageService().uploadImage(entry.value!);
-          imageData.add({'url': url, 'label': entry.key});
-        }
-      }
-
-      String? videoUrl;
-      if (_videoFile != null) {
-        videoUrl = await StorageService().uploadVideo(_videoFile!);
-      }
-
-      await PropertyService().createProperty(
+      final propData = await PropertyService().createProperty(
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim().isNotEmpty ? _descriptionController.text.trim() : null,
         propertyType: _propertyType.toLowerCase(),
@@ -469,9 +455,25 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> with AppStateRest
         securityDeposit: deposit > 0 ? deposit : null,
         agentTerms: _termsController.text.trim().isNotEmpty ? _termsController.text.trim() : null,
         amenityIds: selectedAmenityIds.isNotEmpty ? selectedAmenityIds : null,
-        images: imageData,
-        videoUrl: videoUrl,
       );
+
+      final propertyId = propData['id'] as String;
+
+      int sortOrder = 0;
+      for (final entry in _imageSlots.entries) {
+        if (entry.value != null) {
+          await PropertyService().uploadPropertyImage(
+            propertyId,
+            filePath: entry.value!.path,
+            label: entry.key,
+            sortOrder: sortOrder++,
+          );
+        }
+      }
+
+      if (_videoFile != null) {
+        await PropertyService().uploadPropertyVideo(propertyId, filePath: _videoFile!.path);
+      }
 
       if (mounted) {
         await clearSavedState();

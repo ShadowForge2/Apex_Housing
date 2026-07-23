@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'api_config.dart';
 import 'exceptions.dart';
 import 'token_storage.dart';
@@ -41,7 +43,12 @@ class ApiClient {
 
   late final Dio _dio;
   final TokenStorage _tokenStorage = TokenStorage();
-  bool _isRefreshing = false;
+  Completer<bool>? _refreshCompleter;
+  GlobalKey<NavigatorState>? _navigatorKey;
+
+  void setNavigatorKey(GlobalKey<NavigatorState> key) {
+    _navigatorKey = key;
+  }
 
   ApiClient._internal() {
     _dio = Dio(
@@ -61,32 +68,32 @@ class ApiClient {
       InterceptorsWrapper(
         onRequest: (options, handler) async {
           final token = await _tokenStorage.getAccessToken();
-          if (token != null) {
+          if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
           }
           handler.next(options);
         },
         onError: (error, handler) async {
-          if (error.response?.statusCode == 401 && !_isRefreshing) {
-            _isRefreshing = true;
-            try {
-              final refreshed = await _attemptTokenRefresh();
-              if (refreshed) {
-                final newToken = await _tokenStorage.getAccessToken();
-                error.requestOptions.headers['Authorization'] =
-                    'Bearer $newToken';
+          if (error.response?.statusCode == 401 &&
+              error.requestOptions.path != '/auth/refresh') {
+            final refreshed = await _attemptTokenRefresh();
+            if (refreshed) {
+              final newToken = await _tokenStorage.getAccessToken();
+              error.requestOptions.headers['Authorization'] =
+                  'Bearer $newToken';
+              try {
                 final response = await _dio.fetch(error.requestOptions);
-                _isRefreshing = false;
                 handler.resolve(response);
                 return;
+              } catch (_) {
+                await _tokenStorage.clearAll();
+                handler.next(error);
+                return;
               }
-            } catch (e) {
-              debugPrint('[AUTH] Token refresh failed: $e');
+            } else {
+              await _tokenStorage.clearAll();
+              _navigateToLogin();
             }
-            _isRefreshing = false;
-            await _tokenStorage.clearAll();
-            handler.next(error);
-            return;
           }
           handler.next(error);
         },
@@ -94,12 +101,28 @@ class ApiClient {
     );
   }
 
+  void _navigateToLogin() {
+    final nav = _navigatorKey?.currentState;
+    if (nav != null) {
+      nav.pushNamedAndRemoveUntil('/login', (route) => false);
+    }
+  }
+
   Future<bool> _attemptTokenRefresh() async {
+    if (_refreshCompleter != null && !_refreshCompleter!.isCompleted) {
+      return _refreshCompleter!.future;
+    }
+
+    _refreshCompleter = Completer<bool>();
+
     final refreshToken = await _tokenStorage.getRefreshToken();
-    if (refreshToken == null) return false;
+    if (refreshToken == null) {
+      _refreshCompleter!.complete(false);
+      _refreshCompleter = null;
+      return false;
+    }
 
     try {
-      // Use a separate Dio instance to avoid interceptor loop
       final refreshDio = Dio(BaseOptions(
         baseUrl: ApiConfig.apiUrl,
         connectTimeout: ApiConfig.timeout,
@@ -111,21 +134,25 @@ class ApiClient {
         data: {'refresh_token': refreshToken},
       );
 
-      final body = response.data as Map<String, dynamic>;
-      if (body['success'] == true && body['data'] != null) {
-        final data = body['data'] as Map<String, dynamic>;
-        final newAccess = data['access_token'] as String?;
-        final newRefresh = data['refresh_token'] as String?;
-        if (newAccess == null || newRefresh == null) return false;
-        await _tokenStorage.saveTokens(
-          accessToken: newAccess,
-          refreshToken: newRefresh,
-        );
-        return true;
+      if (response.statusCode == 200) {
+        final body = response.data as Map<String, dynamic>;
+        if (body['success'] == true) {
+          final data = body['data'] as Map<String, dynamic>;
+          await _tokenStorage.saveTokens(
+            accessToken: data['access_token'] as String,
+            refreshToken: data['refresh_token'] as String,
+          );
+          _refreshCompleter!.complete(true);
+          return true;
+        }
       }
+      _refreshCompleter!.complete(false);
       return false;
-    } catch (e) {
+    } catch (_) {
+      _refreshCompleter!.complete(false);
       return false;
+    } finally {
+      _refreshCompleter = null;
     }
   }
 

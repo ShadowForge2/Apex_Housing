@@ -31,7 +31,7 @@ class _RaiseDisputeScreenState extends State<RaiseDisputeScreen> {
   bool _isSubmitting = false;
 
   static const _types = [
-    {'value': 'property_damage', 'label': 'Property Damage', 'icon': Icons.broken_house_rounded},
+    {'value': 'property_damage', 'label': 'Property Damage', 'icon': Icons.home_repair_service_outlined},
     {'value': 'harassment', 'label': 'Harassment', 'icon': Icons.gpp_bad_rounded},
     {'value': 'safety', 'label': 'Safety Concern', 'icon': Icons.shield_rounded},
     {'value': 'noise', 'label': 'Noise Complaint', 'icon': Icons.volume_down_rounded},

@@ -117,7 +117,7 @@ class PropertyCreate(BaseModel):
     agent_signed_at: Optional[datetime] = Field(None, description="Timestamp when agent signed")
     location: PropertyLocationCreate
     pricing: PropertyPricingCreate
-    images: List[PropertyImageCreate] = Field(min_length=3, max_length=5, description="Min 3 images, max 5. Must include 'front' label.")
+    images: List[PropertyImageCreate] = Field(default_factory=list, max_length=5, description="Property images. Must include 'front' label if provided.")
     video_url: Optional[str] = Field(None, description="Video URL")
     features: List[PropertyFeatureCreate] = []
     amenity_ids: List[UUID] = []

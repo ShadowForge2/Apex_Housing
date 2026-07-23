@@ -237,7 +237,7 @@ async def update_fraud_alert(alert_id: UUID, body: FraudAlertUpdate, user=Depend
     return SuccessResponse(message="Alert updated", data=alert)
 
 @router.get("/admins", response_model=SuccessResponse)
-async def list_admins(page: int = 1, page_size: int = 20, user=Depends(get_super_admin), db: AsyncSession = Depends(get_db)):
+async def list_admins(page: int = 1, page_size: int = 20, user=Depends(get_admin), db: AsyncSession = Depends(get_db)):
     service = AdminService(db)
     admins = await service.list_admins(page=page, page_size=page_size)
     return SuccessResponse(data=admins)

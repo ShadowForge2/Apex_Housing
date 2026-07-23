@@ -28,15 +28,16 @@ class PropertyService:
     async def create_property(self, landlord_id: UUID, data: PropertyCreate) -> Property:
         slug = slugify(data.title) + "-" + str(uuid4())[:8]
 
-        valid_labels = get_labels_for_property_type(data.property_type)
-        image_labels = [img.label for img in data.images]
-        missing_front = "front" not in image_labels
-        invalid_labels = [l for l in image_labels if l not in valid_labels]
+        if data.images:
+            valid_labels = get_labels_for_property_type(data.property_type)
+            image_labels = [img.label for img in data.images]
+            missing_front = "front" not in image_labels
+            invalid_labels = [l for l in image_labels if l not in valid_labels]
 
-        if missing_front:
-            raise BadRequest("At least one image must be labeled 'front' for market display")
-        if invalid_labels:
-            raise BadRequest(f"Invalid labels for {data.property_type}: {', '.join(invalid_labels)}. Valid labels: {', '.join(valid_labels)}")
+            if missing_front:
+                raise BadRequest("At least one image must be labeled 'front' for market display")
+            if invalid_labels:
+                raise BadRequest(f"Invalid labels for {data.property_type}: {', '.join(invalid_labels)}. Valid labels: {', '.join(valid_labels)}")
         if not data.agent_terms or len(data.agent_terms.strip()) < 20:
             raise BadRequest("Agent must provide terms and conditions (minimum 20 characters)")
 

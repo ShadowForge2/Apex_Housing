@@ -207,7 +207,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
             MaterialPageRoute(
               builder: (_) => ChatDetailScreen(
                 name: property.agentName,
-                conversationId: existingConvId,
+                conversationId: existingConvId!,
                 otherUserId: property.landlordId!,
                 otherUserRole: 'LANDLORD',
                 isActive: existingActive,

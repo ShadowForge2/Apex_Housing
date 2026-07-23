@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../theme/app_colors.dart';
 
 class AppLocationService {
   static final AppLocationService _instance = AppLocationService._();

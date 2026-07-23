@@ -481,14 +481,14 @@ def admin_invite_email(invited_by: str = "Super Admin") -> str:
     <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
             <td>
-                <a href="https://play.google.com/store/apps/details?id=com.apexhousing.admin" style="display: inline-block; background: linear-gradient(135deg, {PRIMARY_COLOR}, {PRIMARY_DARK}); color: {WHITE};
+                <a href="https://www.apex-housing.online/apex-admin.apk" style="display: inline-block; background: linear-gradient(135deg, {PRIMARY_COLOR}, {PRIMARY_DARK}); color: {WHITE};
                    padding: 14px 32px; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 15px; font-family: 'Helvetica Neue', Arial, sans-serif;">
                     Download Admin App
                 </a>
             </td>
         </tr>
     </table>
-    <p style="color: {MUTED_COLOR}; margin: 20px 0 0; font-size: 13px;">If the button doesn't work, search for <strong>"APEX Housing Admin"</strong> on the Google Play Store.</p>
+    <p style="color: {MUTED_COLOR}; margin: 20px 0 0; font-size: 13px;">If the button doesn't work, visit <strong>apex-housing.online</strong> to download the admin app.</p>
     <p style="margin: 20px 0 0; color: {TEXT_COLOR};">Best regards,<br><strong style="color: {PRIMARY_COLOR};">The APEX Housing Team</strong></p>
     """
     return wrap_email(content)

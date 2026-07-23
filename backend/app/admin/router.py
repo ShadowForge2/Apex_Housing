@@ -927,6 +927,28 @@ async def _notify_admin_group_recipients(
         logger.exception("Failed to send admin group-chat notifications")
 
 
+async def _increment_admin_group_unread_counts(
+    conversation_id: UUID,
+    sender_id: UUID,
+) -> None:
+    try:
+        from app.database import async_session
+        from app.messages.models import ConversationParticipant
+
+        async with async_session() as notification_db:
+            result = await notification_db.execute(
+                select(ConversationParticipant).where(
+                    ConversationParticipant.conversation_id == conversation_id,
+                    ConversationParticipant.user_id != sender_id,
+                )
+            )
+            for participant in result.scalars().all():
+                participant.unread_count = (participant.unread_count or 0) + 1
+            await notification_db.commit()
+    except Exception:
+        logger.exception("Failed to update admin group-chat unread counts")
+
+
 @router.post("/group-chat/message", response_model=SuccessResponse)
 async def send_group_chat_message(
     body: GroupChatMessageCreate,
@@ -965,21 +987,17 @@ async def send_group_chat_message(
     )
     db.add(message)
 
-    unread_result = await db.execute(
+    recipient_result = await db.execute(
         select(ConversationParticipant).where(
             ConversationParticipant.conversation_id == conv.id,
             ConversationParticipant.user_id != user.id,
         )
     )
-    participants = unread_result.scalars().all()
-    recipient_ids = []
-    for p in participants:
-        p.unread_count += 1
-        recipient_ids.append(p.user_id)
+    recipient_ids = [participant.user_id for participant in recipient_result.scalars().all()]
 
     await db.commit()
-    await db.refresh(message)
 
+    background_tasks.add_task(_increment_admin_group_unread_counts, conv.id, user.id)
     background_tasks.add_task(
         _notify_admin_group_recipients,
         recipient_ids,

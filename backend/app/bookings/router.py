@@ -10,6 +10,7 @@ from app.bookings.schemas import BookingCreate, BookingStatusUpdate, ViewingSche
 from app.users.models import User
 from app.common.enums import UserRole
 from app.common.response import SuccessResponse
+from app.bookings.models import Booking
 
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
 

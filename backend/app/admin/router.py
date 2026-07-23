@@ -19,7 +19,7 @@ from app.payments.models import Transaction
 from app.reports.models import BookingReport, DisputeReport
 from app.disputes.models import Dispute
 from app.common.response import SuccessResponse
-from app.common.exceptions import NotFound, Forbidden
+from app.common.exceptions import NotFound, Forbidden, BadRequest
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -339,10 +339,13 @@ async def list_admin_bookings(page: int = 1, page_size: int = 20, status: str = 
     result = await db.execute(query)
     bookings = result.scalars().all()
 
-    # Enrich with names
+    # Enrich with names and escrow status
+    from app.escrow.models import EscrowTransaction
     all_ids = set()
+    booking_ids = []
     for b in bookings:
         all_ids.update([b.tenant_id, b.landlord_id, b.property_id])
+        booking_ids.append(b.id)
     all_ids.discard(None)
     if not all_ids:
         return SuccessResponse(data={"total": total, "bookings": [], "page": page, "page_size": page_size})
@@ -354,6 +357,9 @@ async def list_admin_bookings(page: int = 1, page_size: int = 20, status: str = 
     props_result = await db.execute(select(Property).where(Property.id.in_([b.property_id for b in bookings if b.property_id])))
     props_map = {p.id: p for p in props_result.scalars().all()}
 
+    escrow_result = await db.execute(select(EscrowTransaction).where(EscrowTransaction.booking_id.in_(booking_ids)))
+    escrow_map = {e.booking_id: e for e in escrow_result.scalars().all()}
+
     def _name(uid):
         u = users_map.get(uid)
         p = profiles_map.get(uid)
@@ -364,6 +370,10 @@ async def list_admin_bookings(page: int = 1, page_size: int = 20, status: str = 
     enriched = []
     for b in bookings:
         prop = props_map.get(b.property_id)
+        escrow = escrow_map.get(b.id)
+        escrow_status = "none"
+        if escrow:
+            escrow_status = escrow.status.value if hasattr(escrow.status, 'value') else str(escrow.status)
         enriched.append({
             "id": str(b.id),
             "reference": b.booking_reference,
@@ -373,7 +383,7 @@ async def list_admin_bookings(page: int = 1, page_size: int = 20, status: str = 
             "amount": float(b.total_amount),
             "status": str(b.status),
             "date": b.created_at.strftime("%Y-%m-%d") if b.created_at else "",
-            "escrow_status": "held",
+            "escrow_status": escrow_status,
         })
 
     return SuccessResponse(data={"total": total, "bookings": enriched, "page": page, "page_size": page_size})
@@ -758,14 +768,17 @@ async def broadcast_announcement(
 
     email_html = None
     if body.send_email:
+        from html import escape
+        safe_title = escape(body.title)
+        safe_message = escape(body.message)
         email_html = f"""
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
             <div style="background: #1a1a2e; color: white; padding: 24px; border-radius: 12px 12px 0 0;">
                 <h1 style="margin: 0; font-size: 22px;">APEX Housing</h1>
             </div>
             <div style="background: #f8f9fa; padding: 24px; border: 1px solid #e9ecef; border-top: none; border-radius: 0 0 12px 12px;">
-                <h2 style="color: #1a1a2e; margin-top: 0;">{body.title}</h2>
-                <p style="color: #333; font-size: 15px; line-height: 1.6;">{body.message}</p>
+                <h2 style="color: #1a1a2e; margin-top: 0;">{safe_title}</h2>
+                <p style="color: #333; font-size: 15px; line-height: 1.6;">{safe_message}</p>
                 <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">
                 <p style="color: #999; font-size: 12px;">This is an official announcement from APEX Housing.</p>
             </div>
@@ -962,6 +975,7 @@ async def get_group_chat_messages(
 ):
     from app.messages.models import Conversation, ConversationParticipant, Message
     from app.users.models import User, Profile
+    from uuid import uuid4 as _uuid
 
     result = await db.execute(
         select(Conversation).where(

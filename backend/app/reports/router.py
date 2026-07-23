@@ -77,11 +77,26 @@ async def raise_dispute(
         against_result = await db.execute(select(User).where(User.id == body.reported_against_id))
         against_user = against_result.scalar_one_or_none()
         if against_user:
-            reported_against_name = against_user.name or against_user.email
+            from app.users.models import Profile
+            against_profile_result = await db.execute(select(Profile).where(Profile.user_id == against_user.id))
+            against_profile = against_profile_result.scalar_one_or_none()
+            if against_profile and against_profile.first_name:
+                reported_against_name = f"{against_profile.first_name} {against_profile.last_name or ''}".strip()
+            else:
+                reported_against_name = against_user.email
 
     user_result = await db.execute(select(User).where(User.id == user.id))
     current_user = user_result.scalar_one_or_none()
-    reported_by_name = current_user.name or current_user.email if current_user else "Unknown"
+    if current_user:
+        from app.users.models import Profile
+        my_profile_result = await db.execute(select(Profile).where(Profile.user_id == current_user.id))
+        my_profile = my_profile_result.scalar_one_or_none()
+        if my_profile and my_profile.first_name:
+            reported_by_name = f"{my_profile.first_name} {my_profile.last_name or ''}".strip()
+        else:
+            reported_by_name = current_user.email
+    else:
+        reported_by_name = "Unknown"
 
     dispute = DisputeReport(
         booking_id=body.booking_id,
@@ -96,7 +111,7 @@ async def raise_dispute(
         reported_by_name=reported_by_name,
         reported_against_name=reported_against_name,
         property_title=property_title,
-        booking_reference=booking.reference,
+        booking_reference=booking.booking_reference,
     )
     db.add(dispute)
 

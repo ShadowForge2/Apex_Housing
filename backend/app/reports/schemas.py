@@ -20,7 +20,7 @@ class BookingReportResponse(BaseModel):
     currency: str
     payment_reference: Optional[str] = None
     payment_date: Optional[datetime] = None
-    tenant_signed: bool
+    tenant_terms_agreed: bool
     tenant_signed_at: Optional[datetime] = None
     landlord_signed: bool
     landlord_signed_at: Optional[datetime] = None

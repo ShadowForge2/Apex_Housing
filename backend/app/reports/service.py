@@ -419,7 +419,7 @@ class BookingReportService:
             service_fee=fee,
             platform_fee=platform_fee,
             currency="NGN",
-            payment_reference=transaction.reference if transaction else None,
+            payment_reference=transaction.gateway_reference if transaction else None,
             payment_date=transaction.created_at if transaction else None,
             # Disbursement
             funds_released_at=funds_released_at_val,

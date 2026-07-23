@@ -375,7 +375,8 @@ async def on_escrow_funds_released(data: EscrowFundsReleasedEvent):
         # Notify tenant that report is ready
         if booking:
             try:
-                await service.send_notification(
+                tenant_notif_service = NotificationService(db)
+                await tenant_notif_service.send_notification(
                     user_id=booking.tenant_id,
                     title="Booking Report Ready",
                     message=f"Payment for {prop_title} has been successfully disbursed. Your official booking report is ready to download from your report history.",

@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends
+import logging
+
+from fastapi import APIRouter, BackgroundTasks, Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
@@ -22,6 +24,7 @@ from app.common.response import SuccessResponse
 from app.common.exceptions import NotFound, Forbidden, BadRequest
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
+logger = logging.getLogger(__name__)
 
 @router.get("/dashboard", response_model=SuccessResponse)
 async def dashboard(user=Depends(get_admin), db: AsyncSession = Depends(get_db)):
@@ -877,17 +880,58 @@ class GroupChatMessageCreate(BaseModel):
     content: str
 
 
+async def _notify_admin_group_recipients(
+    recipient_ids: list[UUID],
+    sender_id: UUID,
+    sender_email: str,
+    content: str,
+    conversation_id: UUID,
+) -> None:
+    """Persist and deliver group-chat notifications without delaying a message send."""
+    if not recipient_ids:
+        return
+
+    try:
+        from app.database import async_session
+        from app.notifications.service import NotificationService
+        from app.users.models import Profile
+
+        async with async_session() as notification_db:
+            profile_result = await notification_db.execute(
+                select(Profile).where(Profile.user_id == sender_id)
+            )
+            profile = profile_result.scalar_one_or_none()
+            sender_name = sender_email.split("@", 1)[0]
+            if profile and profile.first_name:
+                sender_name = f"{profile.first_name} {profile.last_name}"
+
+            notification_service = NotificationService(notification_db)
+            for recipient_id in recipient_ids:
+                await notification_service.send_notification(
+                    user_id=recipient_id,
+                    title=f"Admin Chat: {sender_name}",
+                    message=content[:200],
+                    reference_type="admin_group_chat",
+                    reference_id=conversation_id,
+                    data={"conversation_id": str(conversation_id), "sender_id": str(sender_id)},
+                    push_data={"conversation_id": str(conversation_id), "type": "admin_group_chat"},
+                )
+    except Exception:
+        logger.exception("Failed to send admin group-chat notifications")
+
+
 @router.post("/group-chat/message", response_model=SuccessResponse)
 async def send_group_chat_message(
     body: GroupChatMessageCreate,
+    background_tasks: BackgroundTasks,
     user=Depends(get_admin),
     db: AsyncSession = Depends(get_db),
 ):
     from app.messages.models import Conversation, ConversationParticipant, Message
-    from app.users.models import User, Profile
-    from app.notifications.service import NotificationService
     from uuid import uuid4 as _uuid
-    from datetime import datetime, timezone
+    content = body.content.strip()
+    if not content:
+        raise BadRequest("Message content cannot be empty")
 
     result = await db.execute(
         select(Conversation).where(
@@ -914,7 +958,7 @@ async def send_group_chat_message(
 
     message = Message(
         id=_uuid(), conversation_id=conv.id,
-        sender_id=user.id, content=body.content,
+        sender_id=user.id, content=content,
         message_type="text",
     )
     db.add(message)
@@ -934,30 +978,14 @@ async def send_group_chat_message(
     await db.commit()
     await db.refresh(message)
 
-    sender_name = user.email.split("@")[0]
-
-    # Use fresh session for post-commit reads
-    from app.database import async_session
-    async with async_session() as post_db:
-        profile_result = await post_db.execute(
-            select(Profile).where(Profile.user_id == user.id)
-        )
-        profile = profile_result.scalar_one_or_none()
-        if profile and profile.first_name:
-            sender_name = f"{profile.first_name} {profile.last_name}"
-
-        notif_service = NotificationService(post_db)
-        for rid in recipient_ids:
-            await notif_service.send_notification(
-                user_id=rid,
-                title=f"Admin Chat: {sender_name}",
-                message=body.content[:200],
-                reference_type="admin_group_chat",
-                reference_id=conv.id,
-                data={"conversation_id": str(conv.id), "sender_id": str(user.id)},
-                push_data={"conversation_id": str(conv.id), "type": "admin_group_chat"},
-            )
-        await post_db.commit()
+    background_tasks.add_task(
+        _notify_admin_group_recipients,
+        recipient_ids,
+        user.id,
+        user.email,
+        content,
+        conv.id,
+    )
 
     return SuccessResponse(message="Message sent", data={
         "id": str(message.id),

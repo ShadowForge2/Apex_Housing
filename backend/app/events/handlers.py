@@ -545,8 +545,9 @@ async def on_property_created(data: PropertyCreatedEvent):
     logger.info(f"Property {data.property_id} created - notifying admin for approval")
     from app.database import async_session
     from app.notifications.service import NotificationService
-    from app.users.models import User
+    from app.users.models import User, Profile
     from sqlalchemy import select
+    from app.services.email import email_service
 
     async with async_session() as db:
         try:
@@ -564,13 +565,26 @@ async def on_property_created(data: PropertyCreatedEvent):
         except Exception as e:
             logger.error(f"Failed to notify admin for property {data.property_id}: {e}")
 
+    # Send email to landlord confirming submission
+    try:
+        from app.database import async_session as _session
+        async with _session() as db2:
+            user_result = await db2.execute(select(User).where(User.id == data.landlord_id))
+            user = user_result.scalar_one_or_none()
+            if user:
+                await email_service.send_property_submitted(user.email, data.title)
+    except Exception as e:
+        logger.error(f"Failed to send property submitted email for {data.property_id}: {e}")
+
 
 async def on_property_status_changed(data: PropertyStatusChangedEvent):
     logger.info(f"Property {data.property_id} status changed: {data.old_status} -> {data.new_status}")
     from app.database import async_session
     from app.notifications.service import NotificationService
     from app.properties.models import Property
+    from app.users.models import User
     from sqlalchemy import select
+    from app.services.email import email_service
 
     async with async_session() as db:
         try:
@@ -591,6 +605,15 @@ async def on_property_status_changed(data: PropertyStatusChangedEvent):
                     message=msg,
                     reference_type="property", reference_id=data.property_id,
                 )
+
+                # Send email based on status
+                user_result = await db.execute(select(User).where(User.id == prop.landlord_id))
+                user = user_result.scalar_one_or_none()
+                if user:
+                    if data.new_status == "active":
+                        await email_service.send_property_approved(user.email, prop.title)
+                    elif data.new_status == "rejected":
+                        await email_service.send_property_rejected(user.email, prop.title)
         except Exception as e:
             logger.error(f"Failed to notify for property status {data.property_id}: {e}")
 

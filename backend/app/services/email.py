@@ -15,7 +15,7 @@ from app.services.email_templates import (
     payment_receipt_email, escrow_release_email, password_reset_email,
     booking_cancelled_email, dispute_opened_email, dispute_resolved_email,
     move_in_reminder_email, report_ready_email, refund_processed_email,
-    property_approved_email, property_rejected_email,
+    property_approved_email, property_rejected_email, property_submitted_email,
     kyc_approved_email, kyc_rejected_email, admin_dispute_alert_email,
     admin_invite_email,
 )
@@ -300,6 +300,10 @@ class EmailService:
     async def send_property_approved(self, to: str, property_title: str) -> bool:
         html = property_approved_email(property_title)
         return await self.send(to, f"Property Approved - {property_title}", html)
+
+    async def send_property_submitted(self, to: str, property_title: str) -> bool:
+        html = property_submitted_email(property_title)
+        return await self.send(to, f"Property Listing Submitted - {property_title}", html)
 
     async def send_property_rejected(self, to: str, property_title: str, reason: str = "") -> bool:
         html = property_rejected_email(property_title, reason)

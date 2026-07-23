@@ -392,6 +392,17 @@ def property_approved_email(property_title: str) -> str:
     return wrap_email(content)
 
 
+def property_submitted_email(property_title: str) -> str:
+    safe_title = html.escape(property_title)
+    content = f"""
+    <h2 style="color: {PRIMARY_COLOR}; margin: 0 0 12px; font-size: 22px; font-weight: 600;">Property Listing Submitted</h2>
+    <p style="margin: 0 0 20px; color: {TEXT_COLOR};">Your property <strong>{safe_title}</strong> has been successfully submitted and is pending review.</p>
+    <p style="margin: 0 0 20px; color: {TEXT_COLOR};">Our team will review your listing and notify you once it is approved and published on the marketplace.</p>
+    <p style="margin: 0; color: {TEXT_COLOR};">Best regards,<br><strong style="color: {PRIMARY_COLOR};">The APEX Housing Team</strong></p>
+    """
+    return wrap_email(content)
+
+
 def property_rejected_email(property_title: str, reason: str = "") -> str:
     safe_title = html.escape(property_title)
     safe_reason = html.escape(reason) if reason else ""

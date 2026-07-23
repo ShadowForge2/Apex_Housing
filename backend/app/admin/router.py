@@ -16,7 +16,8 @@ from app.admin.schemas import (
 from app.admin.models import AdminAction, AuditLog, PlatformSetting
 from app.bookings.models import Booking
 from app.payments.models import Transaction
-from app.reports.models import BookingReport, Dispute
+from app.reports.models import BookingReport, DisputeReport
+from app.disputes.models import Dispute
 from app.common.response import SuccessResponse
 from app.common.exceptions import NotFound, Forbidden
 
@@ -520,11 +521,11 @@ async def get_transaction_detail(transaction_id: UUID, user=Depends(get_admin), 
 async def list_admin_reports(page: int = 1, page_size: int = 20, status: str = None, user=Depends(get_admin), db: AsyncSession = Depends(get_db)):
     enriched = []
 
-    # Fetch disputes
-    dispute_query = select(Dispute)
+    # Fetch dispute reports
+    dispute_query = select(DisputeReport)
     if status:
-        dispute_query = dispute_query.where(Dispute.status == status)
-    dispute_result = await db.execute(dispute_query.order_by(Dispute.created_at.desc()))
+        dispute_query = dispute_query.where(DisputeReport.status == status)
+    dispute_result = await db.execute(dispute_query.order_by(DisputeReport.created_at.desc()))
     disputes = dispute_result.scalars().all()
     for d in disputes:
         enriched.append({
@@ -575,8 +576,8 @@ async def list_admin_reports(page: int = 1, page_size: int = 20, status: str = N
 
 @router.put("/reports/{report_id}", response_model=SuccessResponse)
 async def update_admin_report(report_id: UUID, status: str = None, assigned_to: str = None, resolution_notes: str = None, user=Depends(get_admin), db: AsyncSession = Depends(get_db)):
-    # Try dispute first
-    result = await db.execute(select(Dispute).where(Dispute.id == report_id))
+    # Try dispute report first
+    result = await db.execute(select(DisputeReport).where(DisputeReport.id == report_id))
     dispute = result.scalar_one_or_none()
     if dispute:
         if status is not None:

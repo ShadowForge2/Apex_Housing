@@ -33,4 +33,4 @@ from app.analytics.models import DailyAnalytics, UserActivity, SearchAnalytics  
 from app.commission.models import CommissionRule, CommissionLog, PlatformRevenue  # noqa: F401
 from app.search.models import SavedSearch, SearchSuggestion  # noqa: F401
 from app.favorites.models import Favorite, PropertyWishList, WishListItem  # noqa: F401
-from app.reports.models import BookingReport  # noqa: F401
+from app.reports.models import BookingReport, DisputeReport  # noqa: F401

@@ -8,7 +8,7 @@ from app.database import get_db
 from app.dependencies import get_current_user
 from app.reports.service import BookingReportService
 from app.reports.schemas import BookingReportResponse, BookingReportListResponse, ReportSignRequest, DisputeCreateRequest
-from app.reports.models import Dispute
+from app.reports.models import DisputeReport
 from app.bookings.models import Booking
 from app.properties.models import Property
 from app.users.models import User
@@ -83,7 +83,7 @@ async def raise_dispute(
     current_user = user_result.scalar_one_or_none()
     reported_by_name = current_user.name or current_user.email if current_user else "Unknown"
 
-    dispute = Dispute(
+    dispute = DisputeReport(
         booking_id=body.booking_id,
         property_id=booking.property_id,
         reported_by_id=user.id,

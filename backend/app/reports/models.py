@@ -128,8 +128,8 @@ class BookingReport(BaseModelCreatedAtMixin, Base):
     booking: Mapped["Booking"] = relationship("Booking", foreign_keys=[booking_id])
 
 
-class Dispute(BaseModelMixin, Base):
-    __tablename__ = "disputes"
+class DisputeReport(BaseModelMixin, Base):
+    __tablename__ = "dispute_reports"
 
     booking_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
